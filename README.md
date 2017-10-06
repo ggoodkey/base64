@@ -50,3 +50,6 @@ var str2 = Base64.read(data);
 
 `myPrivateKey` is one of the private keys corresponding to a public key used in generating the JSON Object (see `theirPublicKeys` above).
 
+# Disclaimer
+By now you've probably noticed quite a bit about public and private keys, and sharing data, but nothing about encryption! That's because any "encryption" algorythm included in this package is haphazard at best and **should not be trusted for any kind of sensitive data**. 
+
