@@ -79,10 +79,36 @@ var annesPrivateKey = "notTellingYouYoudBlabItAllOverTheCountry",
 ```
 Bob and Anne post their public keys on the cloud and download each other's public keys. Now they can begin sharing data.
 ```javascript
-var bobsdatabase = {data:['a','bunch','of','information']};
-var stringified = JSON.stringify(bobsdatabase);
+var bobsdatabase = {a:['bunch', ['of', 'information']]};
+var stringified = JSON.stringify(bobsdatabase); //in this case since we are sharing an object we need to stringify it
 var expiresInMonths = 12;
-var sharableObj = Base64.share(stringified, bobsPrivateKey, [annesPublicKey], expiresInMonths);
+var bobsShareableObj = Base64.share(stringified, bobsPrivateKey, [annesPublicKey], expiresInMonths);
+
+/* bobsShareableObj looks something like this
+{
+  "Version":1,
+  "Expires":1538935195771,
+  "Compressed":true,
+  "Data":"dshjYh9clcnx7Y7ER7VB6ZHz3qE2quxb3tzz3n3E3Tza1QCBhv8Q0snHgC9X0np1NR",
+  "PublicKey":"77188296934259847669163308489209470815671463565895356436076
+      80354745160566553332369054298102053429771185473233184458320970863636 
+      59112008936620321046713270170044820475867157171370009171971084171298
+      83127822781859317013260983435085346317484209555712066772559226831417
+      764532853735362749793114476480776850",
+  "UserKeys":"bAGw2giAmASAeDMCqAbAbAOQFYEUDyAHAhgBZQDGOA7AKIBOAnAXAKYDiArAI
+      4sBMALgCwBGAQQTEEGNAHUAZgGsA0gEkFANwB2FVQEsZAKSyaYABUEyyxGADFBAGQCavWy
+      kETuEvLYoEAKgE9VAV05VKwARBENbAHoyNlsAWxw4wTgLAhh+SIBeORQfMgBGTN4EAGFV
+      fIAOSIB3KQUADQAtawAGLyYAZVsfXhlMmBw4BTgANQUQgGoqLGqWnxkAZyoOhQWpNAUafI
+      6Kbmt+fwZOfMj3CglMpgAlHwBzCGsStBwQvoqaCQICMixubhRIigQmQGOkMBZblcRigLCg
+      FB0pHIrg0pAB7PaCXhIOIQNCCDpXMA6CASZQSJh4ThQeoQTSNGAgAA04FRjSocUa/l4ygU
+      DA6eDAAC8KIYYDRVFBBD4OpFIi0oIYcAwLFAmOTBFQWMpNCw5NR6n9MsQAEIdEo0HQAWTi
+      IiYKG4xqYWC4+VRBD1MhoUBoPjQ1QYKGNLEyjWUnEFguqmgYJU0qkinBK3uUEG4YGqOBgF
+      RaIyo3A6LRgLUyWCuCBQDC8bgoqLiZFuUjAcRoCkycAqKDgWAWnDwclRaCwNGsNHqghKkT
+      kDBwPgsDEy1VJmjIcDg/gUKH8GGqV1u/AIEAoFk4Cls1ndEkaaAqI38C2U1SohjIV1sBEB
+      xsMUBY/BKKBoYqiFccjVF4mj+CgUAtNYkRIIYLCRHA+TED43AQNUqIwMoIAALpAAAA=",
+  "Signature":"6a7dc83efc55d83577c0348f2b27297fcd6be6d437832fbaaf6dfd2a19596eec"
+ }
+*/
 ```
 ## Reading a shared JSON Object
 `Base64.readShared` accepts 2 parameters: `obj` and `myPrivateKey`. It returns a JSON Object as well.
@@ -90,4 +116,25 @@ var sharableObj = Base64.share(stringified, bobsPrivateKey, [annesPublicKey], ex
 `obj` is the JSON Object created by `Base64.share`.
 
 `myPrivateKey` is one of the private keys corresponding to a public key used in generating the JSON Object (see `theirPublicKeys` above).
-
+### Sharing example continued...
+Bob and Anne have shared their pubic keys with each other and Bob sent Anne a JSON file containing his database. Now Anne wants to read it.
+```javascript
+var downloadedDatabase = Base64.readShared(bobsShareableObj, annesPrivateKey);
+/* downloadedDatabase looks like this
+{
+  "type":"results",
+  "message":"success",
+  "data":"{\"a\":[\"bunch\",[\"of\",\"information\"]]}",
+  "hash":"99dab4e1402868c62e1d42e9827c20de36e3633075ed2eac714cc01221e3ea79"
+}
+*/
+```
+Then obviously you need to extract the actual data from the JSON object
+```javascript
+if(downloadedDatabase.type === "results" && downloadedDatabase.message === "success"){
+  downloadedDatabase = JSON.parse(downloadedDatabase.data);
+}
+else if(downloadedDatabase.type === "debug"){
+  alert(downloadedDatabase.message);
+}
+```
