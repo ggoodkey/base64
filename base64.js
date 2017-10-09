@@ -5,7 +5,7 @@
 * SHA256 hash, and generate high entropy random numbers.
 * Generated public Keys are numeric and 300 digits in length (~1000 bit equivelent).
 * 
-* Last Modified: October 6, 2017
+* Last Modified: October 9, 2017
 * Copyright (C) 2017 Graeme Goodkey github.com/ggoodkey
 * All rights reserved
 * 
@@ -683,7 +683,7 @@ var Base64 = {};
 		}
 		if (/^b/.test(input)) input = input.replace(/^b/, "");
 		else {
-			console.log("Decompression error2: Input is not base64 compressed >>> " + input);
+			//console.log("Decompression error2: Input is not base64 compressed >>> " + input);
 			return null;
 		}
 		var output = "",

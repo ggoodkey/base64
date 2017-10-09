@@ -1,0 +1,90 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<style>
+		.output{
+			padding:10px;
+			margin-bottom: 25px;
+			border:1px inset;
+			background-color:black;
+			color:white;
+			overflow-wrap:break-word;
+		}
+	</style>
+	<script src=../base64.js></script>
+</head>
+<body>
+	<h1>base64 Tests</h1>
+	<h2>Test 1: Write</h2>
+	str
+	<div id=output1 class="output"></div>
+	data
+	<div id=output2 class="output"></div>
+	<h2>Test 2: Read</h2>
+	str2
+	<div id=output3 class="output"></div>
+	<h2>Test 3: Create Public Keys</h2>
+	bobsPrivateKey
+	<div id=output4 class="output"></div>
+	bobsPublicKey
+	<div id=output5 class="output"></div>
+	annesPrivateKey
+	<div id=output6 class="output"></div>
+	annesPublicKey
+	<div id=output7 class="output"></div>
+	<h2>Test 4: Share</h2>
+	bobsdatabase
+	<div id=output8 class="output"></div>
+	bobsShareableObj
+	<div id=output9 class="output"></div>
+	<h2>Test 5: Read Shared</h2>
+	downloadedDatabase
+	<div id=output10 class="output"></div>
+	<div id=output11 class="output"></div>
+
+	<script>
+		var str = "my string of text";
+		var data = Base64.write(str);
+		//do something cool with data like saving it to localStorage or as a cookie
+		var str2 = Base64.read(data);
+
+		document.getElementById('output1').innerHTML = str;
+		document.getElementById('output2').innerHTML = data;
+		document.getElementById('output3').innerHTML = str2;
+
+		var bobsPrivateKey = "whatWasMyKeyAgainIForgotItAlready",
+			bobsPublicKey = Base64.createPublicKey(bobsPrivateKey);
+
+		document.getElementById('output4').innerHTML = bobsPrivateKey;
+		document.getElementById('output5').innerHTML = bobsPublicKey;
+
+		var annesPrivateKey = "notTellingYouYoudBlabItAllOverTheCountry",
+			annesPublicKey = Base64.createPublicKey(annesPrivateKey);
+
+		document.getElementById('output6').innerHTML = annesPrivateKey;
+		document.getElementById('output7').innerHTML = annesPublicKey;
+
+		var bobsdatabase = { a: ['bunch', ['of', 'information']] };
+		var stringified = JSON.stringify(bobsdatabase); //in this case since we are sharing an object we need to stringify it
+		var expiresInMonths = 12;
+		var bobsShareableObj = Base64.share(stringified, bobsPrivateKey, [annesPublicKey], expiresInMonths);
+
+		document.getElementById('output8').innerHTML = stringified;
+		document.getElementById('output9').innerHTML = JSON.stringify(bobsShareableObj);
+
+		var downloadedDatabase = Base64.readShared(bobsShareableObj, annesPrivateKey);
+
+		document.getElementById('output10').innerHTML = JSON.stringify(downloadedDatabase);
+
+		if (downloadedDatabase.type === "results" && downloadedDatabase.message === "success") {
+			downloadedDatabase = JSON.parse(downloadedDatabase.data);
+		}
+		else if (downloadedDatabase.type === "debug") {
+			alert(downloadedDatabase.message);
+		}
+		document.getElementById('output11').innerHTML = JSON.stringify(downloadedDatabase);
+
+	</script>
+</body>
+</html>
