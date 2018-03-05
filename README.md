@@ -108,7 +108,7 @@ var downloadedDatabase = Base64.readShared(bobsShareableObj, annesPrivateKey);
   "type":"results",
   "message":"success",
   "data":"{\"a\":[\"bunch\",[\"of\",\"information\"]]}",
-  "hash":"99dab4e1402868c62e1d42e9827c20de36e3633075ed2eac714cc01221e3ea79"
+  "hmac":"6a7dc83efc55d83577c0348f2b27297fcd6be6d437832fbaaf6dfd2a19596eec"
 }
 ```
 Then obviously you need to extract the actual data from the JSON object
@@ -132,9 +132,9 @@ Helper Functions|Description
 `Base64.write_and_verify`|Same as Base64.write, but does some error checking as well
 `Base64.hash`|Salted SHA256 hash
 `Base64.number_hash`|Converts any string to a positive integer of the requiredLength
-`Base64.rand`|Generate a random number up to 300 digits long
+`Base64.rand`|Generate a random number up to 1000 digits long
+`Base64.hmac`|Generate a Hashed Message Authentication Code
 `Base64.createPublicKey`|Creates a Diffie Hellman Merkle public key from any string (usually from a secret password)
-`Base64.getSessionKey`|Creates a Diffie Hellman Merkle session key from your own secret private key and someone elses public key
 `Base64.createUserKey`|Create a secondary secret key to share with someone if you know their public key.
 `Base64.createUserKey_and_verify`|Same as Base64.createUserKey, but needs the user's private key to verify
 `Base64.readUserKey`|Read a secret key (userKey) that was shared with you, using your own secret key and the person who shared it with you's public key
