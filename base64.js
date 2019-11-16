@@ -5,8 +5,8 @@
 * SHA256 hash, and generate high entropy random numbers.
 * Generated public Keys are numeric and 300 digits in length (~1000 bit equivelent).
 * 
-* Last Modified: March 5, 2018
-* Copyright (C) 2018 Graeme Goodkey github.com/ggoodkey
+* Last Modified: November 16, 2019
+* Copyright (C) 2019 Graeme Goodkey github.com/ggoodkey
 * All rights reserved
 * 
 * Released free of charge for inclusion in your own applications, as is or as modified by you.
@@ -27,7 +27,7 @@
 var Base64 = {};
 (function () {
 
-	Base64.Version = 1.1;
+	Base64.Version = 1.2;
 
 	/*base 64 charectors*/
 	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
@@ -352,9 +352,12 @@ var Base64 = {};
 			}
 			ol += 3;
 		}
+		ol = null; output_ = null; chr1 = null; chr2 = null; chr3 = null;
+		enc1 = null; enc2 = null; enc3 = null; enc4 = null;
 		//now decompress the data
 		if (/^l/.test(output)) var compressed = output.replace(/^l/, "");
 		else return output.replace(/^n/, "");
+		output = null;
 		if (compressed === null) {
 			console.log("Decompression error2: Reverted from Base64 value is null");
 			return null;
@@ -363,22 +366,19 @@ var Base64 = {};
 			console.log('Decompression error3: Reverted from Base64 value is "" (Empty string)');
 			return null;
 		}
-		var dictionary = [],
-			next,
+		var dictionary = [0, 1, 2, 3],
 			enlargeIn = 4,
 			dictSize = 4,
 			numBits = 3,
 			entry = "",
 			result = "",
 			w,
-			bits, resb, maxpower, power,
+			bits = 0,
+			resb,
+			maxpower = 4,
+			power = 1,
 			c,
 			data = { string: compressed, val: compressed.charCodeAt(0), position: 32768, index: 1 };
-		f = String.fromCharCode;
-		for (i = 0; i < 3; i += 1) dictionary[i] = i;
-		bits = 0;
-		maxpower = Math.pow(2, 2);
-		power = 1;
 		while (power != maxpower) {
 			resb = data.val & data.position;
 			data.position >>= 1;
@@ -389,7 +389,7 @@ var Base64 = {};
 			bits |= (resb > 0 ? 1 : 0) * power;
 			power <<= 1;
 		}
-		switch (next = bits) {
+		switch (bits) {
 			case 0:
 				bits = 0;
 				maxpower = Math.pow(2, 8);
@@ -702,12 +702,10 @@ var Base64 = {};
 
 	/*converts any string to a positive integer of the requiredLength*/
 	Base64.number_hash = function (str, requiredLength) {
-		requiredLength = !isNaN(parseFloat(requiredLength)) && isFinite(requiredLength) && requiredLength > 0 ? parseInt(requiredLength) : 10;
-		str = Base64.hash(str);
+		requiredLength = !isNaN(parseFloat(requiredLength)) && isFinite(requiredLength) && requiredLength > 0 ? parseInt(requiredLength) : 10;	
 		var out = "";
-		for (var a = 0; out.length < requiredLength; a++) {
-			var h = 0, i, chr, len;
-			if (str.length === 0) return h;
+		for (let a = 0, h = 0, i, chr, len; out.length < requiredLength; a++) {
+			//str = Base64.hash(str);
 			for (i = 0, len = str.length; i < len; i++) {
 				chr = str.charCodeAt(i);
 				h = (h << 5) - h + chr;
@@ -720,15 +718,18 @@ var Base64 = {};
 		return out.slice(0, requiredLength);
 	};
 
-	/*	generate a random number of the "requiredLength" (input a Number from 1-1000), 
+	/*	generate a random number of the "requiredLength" (input a Number from 1-300), 
 		based on timing, proccessor speed, and any "additionalEntropy" you want to provide (optional)*/
 	Base64.rand = function (requiredLength, additionalEntropy) {
+		function random12Digit() {
+			return String(Math.floor(Math.random() * (((Math.pow(10, 16)) - 1) - Math.pow(10, 15) + 1) + Math.pow(10, 15))).slice(3,15);
+		}
 		var len = !isNaN(parseFloat(requiredLength)) && isFinite(requiredLength) && requiredLength > 0 ? parseInt(requiredLength, 10) : 8,
-			ent = additionalEntropy ? String(additionalEntropy) : String(Math.random()),
+			ent = additionalEntropy ? String(additionalEntropy) : random12Digit(),
 			num = 0, out = "";
-		if (len > 1000) len = 1000;//physical limit to save you from breaking your browser!
+		if (len > 300) len = 300;//physical limit
 		while (out.length < len) {
-			num = 0;
+			num = Number(random12Digit());
 			for (var b = 0; b < 4300; b++) num += Number(String(new Date().getTime()).slice(7));//generate 32 bits of entropy
 			num = String(num);
 			while (num.charAt(0) === "0" && num.length > 1) num = num.slice(1);
@@ -737,7 +738,7 @@ var Base64 = {};
 		}
 		while (out.charAt(0) === "0" && out.length > 1) out = out.slice(1);
 		//in some cases during the last round through the "while" statement a number starting with 3 or more 0's will be chosen which results in too short an output number
-		if (out.length < len) return Base64.rand(len, ent + Math.random());//try again
+		if (out.length < len) return Base64.rand(len, ent + random12Digit());//try again
 		return out.slice(0, len);
 	};
 
@@ -783,8 +784,9 @@ var Base64 = {};
 		message = message ? message : "";
 		message = String(message.length + 1231) + String(message);
 		var s = unescape(encodeURIComponent(message)); // UTF-8
+		var i;
 		message = Uint8Arr(s.length);
-		for (var i = 0; i < s.length; i++) {
+		for (i = 0; i < s.length; i++) {
 			message[i] = s.charCodeAt(i) & 0xff;
 		}
 		var length = message.length;
@@ -795,7 +797,7 @@ var Base64 = {};
 		if (typeof Uint8Array !== 'undefined') {
 			m.set(message);
 		} else {
-			for (var i = 0; i < message.length; i++) {
+			for (i = 0; i < message.length; i++) {
 				m[i] = message[i];
 			}
 			for (i = message.length; i < m.length; i++) {
@@ -809,49 +811,66 @@ var Base64 = {};
 		m[byteLength - 1] = bitLength & 0xff;
 		var words = Int32Arr(wordLength);
 		var byteIndex = 0;
+		var word;
 		for (i = 0; i < words.length; i++) {
-			var word = m[byteIndex] << 24;
+			word = m[byteIndex] << 24;
 			word |= m[byteIndex + 1] << 16;
 			word |= m[byteIndex + 2] << 8;
 			word |= m[byteIndex + 3];
 			words[i] = word;
 			byteIndex += 4;
 		}
+		word = null; byteIndex = null;
 		var w = Int32Arr(64);
+		var v;
+		var s0;
+		var s1;
+		var a;
+		var b;
+		var c;
+		var d;
+		var e;
+		var f;
+		var g;
+		var h;
+		var ch;
+		var temp1;
+		var temp2;
+		var maj;
 		for (var j = 0; j < wordLength; j += 16) {
 			for (i = 0; i < 16; i++) {
 				w[i] = words[j + i];
 			}
 			for (i = 16; i < 64; i++) {
-				var v = w[i - 15];
-				var s0 = (v >>> 7) | (v << 25);
+				v = w[i - 15];
+				s0 = (v >>> 7) | (v << 25);
 				s0 ^= (v >>> 18) | (v << 14);
 				s0 ^= (v >>> 3);
 				v = w[i - 2];
-				var s1 = (v >>> 17) | (v << 15);
+				s1 = (v >>> 17) | (v << 15);
 				s1 ^= (v >>> 19) | (v << 13);
 				s1 ^= (v >>> 10);
 				w[i] = (w[i - 16] + s0 + w[i - 7] + s1) & 0xffffffff;
 			}
-			var a = h0;
-			var b = h1;
-			var c = h2;
-			var d = h3;
-			var e = h4;
-			var f = h5;
-			var g = h6;
-			var h = h7;
+			a = h0;
+			b = h1;
+			c = h2;
+			d = h3;
+			e = h4;
+			f = h5;
+			g = h6;
+			h = h7;
 			for (i = 0; i < 64; i++) {
 				s1 = (e >>> 6) | (e << 26);
 				s1 ^= (e >>> 11) | (e << 21);
 				s1 ^= (e >>> 25) | (e << 7);
-				var ch = (e & f) ^ (~e & g);
-				var temp1 = (h + s1 + ch + K[i] + w[i]) & 0xffffffff;
+				ch = (e & f) ^ (~e & g);
+				temp1 = (h + s1 + ch + K[i] + w[i]) & 0xffffffff;
 				s0 = (a >>> 2) | (a << 30);
 				s0 ^= (a >>> 13) | (a << 19);
 				s0 ^= (a >>> 22) | (a << 10);
-				var maj = (a & b) ^ (a & c) ^ (b & c);
-				var temp2 = (s0 + maj) & 0xffffffff;
+				maj = (a & b) ^ (a & c) ^ (b & c);
+				temp2 = (s0 + maj) & 0xffffffff;
 				h = g;
 				g = f;
 				f = e;
@@ -881,7 +900,6 @@ var Base64 = {};
 			hash[i + 24] = (h6 >>> (8 * (3 - i))) & 0xff;
 			hash[i + 28] = (h7 >>> (8 * (3 - i))) & 0xff;
 		}
-
 		if (asArray) return hash;
 		else return toHex(hash);
 	};
@@ -892,15 +910,15 @@ var Base64 = {};
 		else {
 			var s = unescape(encodeURIComponent(key)); // UTF-8
 			key = new Uint8Array(32);
-			for (var i = 0; i < s.length; i++) {
+			for (let i = 0; i < s.length; i++) {
 				key[i] = s.charCodeAt(i);
 			}
 		}
-		for (var i = 0; i < key.length; i++) {
+		for (let i = 0; i < key.length; i++) {
 			key[i] ^= 0x36;
 		}
 		var inner = Base64.hash(toHex(key));
-		for (var i = 0; i < key.length; i++) {
+		for (let i = 0; i < key.length; i++) {
 			key[i] ^= 0x36 ^ 0x5c;
 		}
 		return Base64.hash(toHex(key) + inner + String(message));

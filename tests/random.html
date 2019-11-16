@@ -1,0 +1,498 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>test</title>
+	<style>
+	.point{
+	width:8px;
+	height:8px;
+	background-color:rgba(1, 127, 209, 0.5);
+	position: absolute;
+	border-radius:4px;
+	}
+	.point:hover{
+	background-color:orange;
+	}
+	.bar, .bar3{
+	width:1px;
+	background-color:rgba(1, 127, 209, 0.5);
+	position: absolute;
+	bottom:0;
+	}
+	.bar3{
+	width:3px;
+	}
+	.bar:hover, .bar3:hover{
+	background-color: orange;
+	border: 2px solid orange;
+	}
+	#graph1, #graph2, #graph3, #graph4{
+	border:1px solid rgba(1, 127, 209, 0.5);
+	}
+	#graph1{
+	top:150px;
+	width:1008px;
+	height:367px;
+	}
+	#graph2{
+	top:570px;
+	width:1000px;
+	height:200px;
+	}
+	#graph3{
+	top: 820px;
+	width: 1000px;
+	height: 500px;
+	}
+	#graph4{
+		top:1400px;
+		width:1000px;
+		height:500px;
+	}
+	#graph1, #graph2, #graph3, #graph4, #heading1, #heading2, #heading3, #heading4{
+	position: absolute;
+	left:50px;
+	}
+	#heading1{
+	top:100px;
+	}
+	#heading2{
+	top:520px;
+	}
+	#heading3{
+	top:770px;
+	}
+	#heading4{
+		top:1350px;
+	}
+	.x-axis, .y-axis{
+	position: absolute;
+	}
+	.y-axis {
+		-ms-transform: rotate(-90deg);
+		-o-transform: rotate(-90deg);
+		-webkit-transform: rotate(-90deg);
+		-moz-transform: rotate(-90deg);
+		transform: rotate(-90deg);
+	}
+	#graph1_y-axis{
+	top: 320px;
+	left: -150px;
+	width: 370px;
+	}
+	#graph2_x-axis{
+	top:770px;
+	left:50px;
+	width:1000px;
+	}
+	#graph2_y-axis{
+	top: 660px;
+	left: -65px;
+	width: 200px;
+	}
+	#graph3_x-axis{
+	top:1320px;
+	left:50px;
+	width:1000px;
+	}
+	#graph3_y-axis{
+	top: 1060px;
+	left: -220px;
+	width: 500px;
+	}
+	#graph4_x-axis{
+		top:1900px;
+		left:50px;
+		width:1000px;
+	}
+	#graph4_y-axis{
+		top:1650px;
+		left:-220px;
+		width:500px;
+	}
+	.min{
+	position:absolute;
+	top:0;
+	}
+	.max{
+	position:absolute;
+	right:0;
+	top:0;
+	}
+	.label{
+	padding-left:35%;
+	font-weight:bold;
+	}
+	</style>
+</head>
+<body>
+	<div id="intro">
+		This test creates random values and graphs the results<br />
+		Number of Random Values: <input id="numOfReps" type="number" min="1" max="5000" value="2500"/>
+		Number of Digits in Length: <input id="randomNumberLength" type="number" min="1" max="100" value="16"/>
+        <input id="go" type="button" value="GO (max 300 digits, be patient)" onclick="javascript: go(1);"/>
+        <input id="compare" type="button" value="Compare with Math.random (max 16 digits)" onclick="javascript: go(2);"/>
+	</div>
+	<div id="debug"></div>
+	<h2 id="heading1">Graph 1: Scatter Plot</h2>
+	<div id="graph1"></div>
+	<div id="graph1_y-axis" class="y-axis"><div class="label">Output Number</div><div class="min">0</div><div class="max">Max</div></div>
+	<h2 id="heading2">Graph 2: Frequency Analysis</h2>
+	<div id="graph2"></div>
+	<div id="graph2_y-axis" class="y-axis"><div class="label">Frequency</div><div class="min">0</div><div class="max">Max</div></div>
+	<div id="graph2_x-axis" class="x-axis"><div class="label">Output Number</div><div class="min">0</div><div class="max">Max</div></div>
+	<h2 id="heading3">Graph 3: Character Probability</h2>
+	<div id="graph3"></div>
+	<div id="graph3_y-axis" class="y-axis"><div class="label">Probabilty</div><div class="min">0%</div><div class="max">100%</div></div>
+	<div id="graph3_x-axis" class="x-axis"><div class="label">Output Number</div><div class="min">First Character is a 1</div><div class="max">Last Character is a 9</div></div>
+	<h2 id="heading4">Graph 4: Compressability</h2>
+	<div id="graph4"></div>
+	<div id="graph4_y-axis" class="y-axis"><div class="label">Compressability</div><div class="min">0%</div><div class="max">100%</div></div>
+	<div id="graph4_x-axis" class="x-axis"><div class="label">Output Number</div><div class="min">0</div><div class="max">Max</div></div>
+	<script type="text/javascript" src="../base64.js"></script>
+	<script>
+        /*compress and convert text to Base64*/
+        function toBase64(input) {
+                const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+                var i = 0,
+                    output = "";
+				while (i < input.length * 2) {
+					if (i % 2 == 0) {
+						chr1 = input.charCodeAt(i / 2) >> 8;
+						chr2 = input.charCodeAt(i / 2) & 255;
+						if (i / 2 + 1 < input.length)
+							chr3 = input.charCodeAt(i / 2 + 1) >> 8;
+						else
+							chr3 = NaN;
+					} else {
+						chr1 = input.charCodeAt((i - 1) / 2) & 255;
+						if ((i + 1) / 2 < input.length) {
+							chr2 = input.charCodeAt((i + 1) / 2) >> 8;
+							chr3 = input.charCodeAt((i + 1) / 2) & 255;
+						} else
+							chr2 = chr3 = NaN;
+					}
+					i += 3;
+					enc1 = chr1 >> 2;
+					enc2 = (chr1 & 3) << 4 | chr2 >> 4;
+					enc3 = (chr2 & 15) << 2 | chr3 >> 6;
+					enc4 = chr3 & 63;
+					if (isNaN(chr2)) {
+						enc3 = enc4 = 64;
+					} else if (isNaN(chr3)) {
+						enc4 = 64;
+					}
+					output = output +
+					charset.charAt(enc1) + charset.charAt(enc2) +
+					charset.charAt(enc3) + charset.charAt(enc4);
+				}
+				return output;
+			}
+		function convertTo(input) {
+			if (input === null) return "";
+			var orig = input;
+			var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+			var i,
+				value,
+				context_dictionary = {},
+				context_dictionaryToCreate = {},
+				context_c = "",
+				context_wc = "",
+				context_w = "",
+				context_enlargeIn = 2, // Compensate for the first entry which should not count
+				context_dictSize = 3,
+				context_numBits = 2,
+				context_data_string = "",
+				context_data_val = 0,
+				context_data_position = 0,
+				ii,
+				f = String.fromCharCode;
+			for (ii = 0; ii < input.length; ii += 1) {
+				context_c = input.charAt(ii);
+				if (!Object.prototype.hasOwnProperty.call(context_dictionary, context_c)) {
+					context_dictionary[context_c] = context_dictSize++;
+					context_dictionaryToCreate[context_c] = true;
+				}
+				context_wc = context_w + context_c;
+				if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc)) {
+					context_w = context_wc;
+				} else {
+					if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+						if (context_w.charCodeAt(0) < 256) {
+							for (i = 0; i < context_numBits; i++) {
+								context_data_val = context_data_val << 1;
+								if (context_data_position === 15) {
+									context_data_position = 0;
+									context_data_string += f(context_data_val);
+									context_data_val = 0;
+								} else {
+									context_data_position++;
+								}
+							}
+							value = context_w.charCodeAt(0);
+							for (i = 0; i < 8; i++) {
+								context_data_val = context_data_val << 1 | value & 1;
+								if (context_data_position === 15) {
+									context_data_position = 0;
+									context_data_string += f(context_data_val);
+									context_data_val = 0;
+								} else {
+									context_data_position++;
+								}
+								value = value >> 1;
+							}
+						} else {
+							value = 1;
+							for (i = 0; i < context_numBits; i++) {
+								context_data_val = context_data_val << 1 | value;
+								if (context_data_position === 15) {
+									context_data_position = 0;
+									context_data_string += f(context_data_val);
+									context_data_val = 0;
+								} else {
+									context_data_position++;
+								}
+								value = 0;
+							}
+							value = context_w.charCodeAt(0);
+							for (i = 0; i < 16; i++) {
+								context_data_val = context_data_val << 1 | value & 1;
+								if (context_data_position === 15) {
+									context_data_position = 0;
+									context_data_string += f(context_data_val);
+									context_data_val = 0;
+								} else {
+									context_data_position++;
+								}
+								value = value >> 1;
+							}
+						}
+						context_enlargeIn--;
+						if (context_enlargeIn === 0) {
+							context_enlargeIn = Math.pow(2, context_numBits);
+							context_numBits++;
+						}
+						delete context_dictionaryToCreate[context_w];
+					} else {
+						value = context_dictionary[context_w];
+						for (i = 0; i < context_numBits; i++) {
+							context_data_val = context_data_val << 1 | value & 1;
+							if (context_data_position === 15) {
+								context_data_position = 0;
+								context_data_string += f(context_data_val);
+								context_data_val = 0;
+							} else {
+								context_data_position++;
+							}
+							value = value >> 1;
+						}
+					}
+					context_enlargeIn--;
+					if (context_enlargeIn === 0) {
+						context_enlargeIn = Math.pow(2, context_numBits);
+						context_numBits++;
+					}
+					// Add wc to the dictionary.
+					context_dictionary[context_wc] = context_dictSize++;
+					context_w = String(context_c);
+				}
+			}
+			// Output the code for w.
+			if (context_w !== "") {
+				if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+					if (context_w.charCodeAt(0) < 256) {
+						for (i = 0; i < context_numBits; i++) {
+							context_data_val = context_data_val << 1;
+							if (context_data_position === 15) {
+								context_data_position = 0;
+								context_data_string += f(context_data_val);
+								context_data_val = 0;
+							} else {
+								context_data_position++;
+							}
+						}
+						value = context_w.charCodeAt(0);
+						for (i = 0; i < 8; i++) {
+							context_data_val = context_data_val << 1 | value & 1;
+							if (context_data_position === 15) {
+								context_data_position = 0;
+								context_data_string += f(context_data_val);
+								context_data_val = 0;
+							} else {
+								context_data_position++;
+							}
+							value = value >> 1;
+						}
+					} else {
+						value = 1;
+						for (i = 0; i < context_numBits; i++) {
+							context_data_val = context_data_val << 1 | value;
+							if (context_data_position === 15) {
+								context_data_position = 0;
+								context_data_string += f(context_data_val);
+								context_data_val = 0;
+							} else {
+								context_data_position++;
+							}
+							value = 0;
+						}
+						value = context_w.charCodeAt(0);
+						for (i = 0; i < 16; i++) {
+							context_data_val = context_data_val << 1 | value & 1;
+							if (context_data_position === 15) {
+								context_data_position = 0;
+								context_data_string += f(context_data_val);
+								context_data_val = 0;
+							} else {
+								context_data_position++;
+							}
+							value = value >> 1;
+						}
+					}
+					context_enlargeIn--;
+					if (context_enlargeIn === 0) {
+						context_enlargeIn = Math.pow(2, context_numBits);
+						context_numBits++;
+					}
+					delete context_dictionaryToCreate[context_w];
+				} else {
+					value = context_dictionary[context_w];
+					for (i = 0; i < context_numBits; i++) {
+						context_data_val = context_data_val << 1 | value & 1;
+						if (context_data_position === 15) {
+							context_data_position = 0;
+							context_data_string += f(context_data_val);
+							context_data_val = 0;
+						} else {
+							context_data_position++;
+						}
+						value = value >> 1;
+					}
+				}
+				context_enlargeIn--;
+				if (context_enlargeIn === 0) {
+					context_enlargeIn = Math.pow(2, context_numBits);
+					context_numBits++;
+				}
+			}
+			// Mark the end of the stream
+			value = 2;
+			for (i = 0; i < context_numBits; i++) {
+				context_data_val = context_data_val << 1 | value & 1;
+				if (context_data_position === 15) {
+					context_data_position = 0;
+					context_data_string += f(context_data_val);
+					context_data_val = 0;
+				} else {
+					context_data_position++;
+				}
+				value = value >> 1;
+			}
+			// Flush the last char
+			while (true) {
+				context_data_val = context_data_val << 1;
+				if (context_data_position === 15) {
+					context_data_string += f(context_data_val);
+					break;
+				}
+				else context_data_position++;
+			}
+			//constants represent the state of the data, whether or not 
+			//it has been compressed so that the process can be reversed
+			var compressed = toBase64("l" + context_data_string);
+			orig = toBase64("n" + orig);
+			//only use compressed version if it is indeed smaller,
+			//as lzstring compression actually lengthens short, or already
+			//highly compressed strings
+			if (compressed.length > orig.length) compressed = orig;
+			return "b" + compressed;
+        }
+
+		//plot keys
+		function go(trial) {
+            var key = [],
+                compressed = [],//compressability test
+                uncompressed = [],
+				numOfReps = document.getElementById("numOfReps").value;
+				randomNumberLength = document.getElementById("randomNumberLength").value;
+				freq = [],
+                list = [],
+                a = 0,
+                b = 0,
+                c = 0,
+                d = 0,
+				graph1 = "",
+				graph2 = "",
+				graph3 = "",
+				graph4 = "",
+				min = Infinity,
+				max = 0,
+				maxLength = 0,
+				maxFreq = 1,
+				char = "0123456789".split(""),
+				prob = [],
+				t1=new Date();
+            randomNumberLength = trial === 2 && randomNumberLength > 16 ? 16 : randomNumberLength;
+
+			for (a = 0; a < numOfReps; a++) {
+			    if(trial === 1) key[a] = Base64.rand(randomNumberLength, a);
+                else key[a] = String(Math.floor(Math.random() * (((Math.pow(10, randomNumberLength)) - 1) - Math.pow(10, randomNumberLength - 1) + 1) + Math.pow(10, randomNumberLength - 1)));
+                compressed[a] = convertTo(key[a]).length;
+                uncompressed[a] = toBase64(key[a]).length;
+				var index = list.indexOf(key[a]);
+				if (index == -1) {
+					list[c] = key[a];
+					freq[c] = 1;
+					c++;
+				}
+				else {
+					freq[index]++;
+					if (freq[index] > maxFreq) maxFreq = freq[index];
+				}
+            }
+            var totalUncompressed = key.reduce(function (a, b) { return a + b; }, 0);
+			var totalCompressed = (1 - (convertTo(totalUncompressed).length / toBase64(totalUncompressed).length)) * 100 + "% compressible";
+			var timePerCalc = (new Date() - t1) / numOfReps + " milliseconds per calculation";
+			if (randomNumberLength > 300) randomNumberLength = 300;
+			for (a = 0, b = 0, c = 0; a < numOfReps; a++) {
+				graph1 += "<div class='point' style='bottom:" + ((key[a] - Math.pow(10, randomNumberLength - 1)) / (2.5 * Math.pow(10, randomNumberLength - 3))) + "px; left:" + (a / 5) + "px;' title='value " + a + ": " + key[a] + "'></div>";
+				var test = String(key[a]);
+				if (test.length > maxLength) maxLength = test.length;
+				while (test.length < maxLength) test = "0" + test;
+				if (test < min) min = key[a];
+				if (test > max) max = key[a];
+				d = 0;
+				for (b = 0; b < maxLength; b++) {
+					if (a === 0) prob.push(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+					for (c = 0; c < char.length; c++, d++) {
+						if (test.charAt(b) === char[c]) prob[d]++;
+					}
+				}
+				graph4 += "<div class='bar3' style='height:" + (1-(compressed[a] / uncompressed[a])) * 500 + "px; left:" + (a * 1000/numOfReps) + "px;' title='Compressed by " + parseInt((1 - (compressed[a] / uncompressed[a]))*100) + "%'></div>";
+			}
+			document.getElementById("debug").innerHTML = "<b>min=</b>" + min + " &nbsp; <b>max=</b>" + max + "<br/><b>diff=</b>" + (max - min) + " &nbsp; <b>unique values=</b>" + freq.length + " &nbsp; <b>performance=</b>" + timePerCalc + " &nbsp; <b>compression=</b>" + totalCompressed;
+			document.getElementById("graph1").style.width = ((numOfReps / 5) + 8) + "px";
+			document.getElementById("graph1").innerHTML = graph1;
+			for (a = 0; a < freq.length; a++) {
+				graph2 += "<div class='bar' style='height:" + (freq[a] * 200) / (maxFreq) + "px; left:" + ((list[a] - Math.pow(10, randomNumberLength - 1)) / (9 * Math.pow(10, randomNumberLength - 4))) + "px;' title='" + list[a] + ": " + freq[a] + " occurence(s)'></div>";
+			}
+			document.getElementById("graph2").innerHTML = graph2;
+			for (a = 0, b = 0, c = 0; a < prob.length; a++) {
+				graph3 += "<div class='bar3' style='height:" + (prob[a] / numOfReps * 500) + "px; left:" + (a * 2 * (50/randomNumberLength)) + "px;' title='Character " + (c + 1) + " is a " + char[b] + ": " + (prob[a] / numOfReps * 100) + "%'></div>";
+				if (b > 8) {
+					b = 0;
+					c++;
+				}
+				else b++;
+			}
+			document.getElementById("graph3").innerHTML = graph3;
+			document.getElementById("graph4").innerHTML = graph4;
+		}
+		
+		
+
+	</script>
+</body>
+</html>
