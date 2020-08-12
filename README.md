@@ -116,7 +116,7 @@ Then obviously you need to extract the actual data from the JSON object
 if(downloadedDatabase.type === "results" && downloadedDatabase.message === "success"){
   downloadedDatabase = JSON.parse(downloadedDatabase.data);
 }
-else if(downloadedDatabase.type === "debug"){
+else if(downloadedDatabase.type === "error"){
   alert(downloadedDatabase.message);
 }
 ```
