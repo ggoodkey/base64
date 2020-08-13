@@ -1,11 +1,11 @@
-﻿"use strict";
+"use strict";
 /*!
 * Base64 performs several functions:
 * Compress a string to base64, Diffie Hellman Merkle key exchange,
 * SHA256 hash, and generate high entropy random numbers.
 * Generated public Keys are numeric and 300 digits in length (~1000 bit equivelent).
 *
-* Last Modified: August 12, 2020
+* Last Modified: August 13, 2020
 * Copyright (C) 2020 Graeme Goodkey github.com/ggoodkey
 * All rights reserved
 *
@@ -1359,68 +1359,7 @@ var Base64 = (function () {
         }
         return Integer;
     })();
-    /*creates a Diffie Hellman Merkle session key from your own secret private key and someone elses public key*/
-    function getSessionKey(privateKey, publicKey) {
-        return bigInt(publicKey).modPow(b64.number_hash(privateKey, 100), prime).toString();
-    }
-    b64.number_hash = function (str, requiredLength) {
-        requiredLength = requiredLength && !isNaN(requiredLength) && isFinite(requiredLength) && requiredLength > 0 ? requiredLength : 10;
-        var out = "";
-        for (var a = 0, h = 0, s = "", i = void 0, chr = void 0, len = void 0; out.length < requiredLength; a++) {
-            //str = Base64.hash(str);
-            for (i = 0, len = str.length; i < len; i++) {
-                chr = str.charCodeAt(i);
-                h = (h << 5) - h + chr;
-                h |= 0; // Convert to 32bit integer
-            }
-            s = String(h + Math.pow(2, 31));
-            while (s.length < 10)
-                s = "0" + h;
-            out += s.slice(2);
-        }
-        return out.slice(0, requiredLength);
-    };
-    b64.rand = function (requiredLength, additionalEntropy) {
-        function random12Digit() {
-            return String(Math.floor(Math.random() * (((Math.pow(10, 16)) - 1) - Math.pow(10, 15) + 1) + Math.pow(10, 15))).slice(3, 15);
-        }
-        var len = requiredLength && !isNaN(requiredLength) && isFinite(requiredLength) && requiredLength > 0 ? requiredLength : 8, ent = additionalEntropy ? String(additionalEntropy) : random12Digit(), num = 0, str = "", out = "";
-        if (len > 300)
-            len = 300; //physical limit
-        while (out.length < len) {
-            num = Number(random12Digit());
-            for (var b = 0; b < 4300; b++)
-                num += Number(String(new Date().getTime()).slice(7)); //generate 32 bits of entropy
-            str = String(num);
-            while (str.charAt(0) === "0" && str.length > 1)
-                str = str.slice(1);
-            str = b64.number_hash(ent + str, 8); //generate 32 bit number from 32 bits of entropy (plus additionalEntropy)
-            out += str; //string all the numbers together to form required length
-        }
-        while (out.charAt(0) === "0" && out.length > 1)
-            out = out.slice(1);
-        //in some cases during the last round through the "while" statement a number starting with 3 or more 0's will be chosen which results in too short an output number
-        if (out.length < len)
-            return b64.rand(len, ent + random12Digit()); //try again
-        return out.slice(0, len);
-    };
-    b64.hash = function (message, asArray) {
-        function Uint8Arr(length) {
-            if (typeof Uint8Array !== 'undefined') {
-                return new Uint8Array(length);
-            }
-            else {
-                return new Array(length);
-            }
-        }
-        function Int32Arr(length) {
-            if (typeof Int32Array !== 'undefined') {
-                return new Int32Array(length);
-            }
-            else {
-                return new Array(length);
-            }
-        }
+    function sha256(str) {
         var h0 = 0x6a09e667;
         var h1 = 0xbb67ae85;
         var h2 = 0x3c6ef372;
@@ -1444,11 +1383,9 @@ var Base64 = (function () {
             0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
             0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
         ];
-        message = message ? message : "";
-        message = String(message.length + 1231) + String(message);
-        var s = unescape(encodeURIComponent(message)); // UTF-8
+        var s = unescape(encodeURIComponent(str)); // UTF-8
         var i;
-        var arr = Uint8Arr(s.length);
+        var arr = new Uint8Array(s.length);
         for (i = 0; i < s.length; i++) {
             arr[i] = s.charCodeAt(i) & 0xff;
         }
@@ -1456,7 +1393,7 @@ var Base64 = (function () {
         var byteLength = Math.floor((length + 72) / 64) * 64;
         var wordLength = byteLength / 4;
         var bitLength = length * 8;
-        var m = Uint8Arr(byteLength);
+        var m = new Uint8Array(byteLength);
         if (typeof Uint8Array !== 'undefined' && !Array.isArray(m)) {
             m.set(arr);
         }
@@ -1473,7 +1410,7 @@ var Base64 = (function () {
         m[byteLength - 3] = (bitLength >>> 16) & 0xff;
         m[byteLength - 2] = (bitLength >>> 8) & 0xff;
         m[byteLength - 1] = bitLength & 0xff;
-        var words = Int32Arr(wordLength);
+        var words = new Int32Array(wordLength);
         var byteIndex = 0;
         var word;
         for (i = 0; i < words.length; i++) {
@@ -1486,7 +1423,7 @@ var Base64 = (function () {
         }
         word = null;
         byteIndex = null;
-        var w = Int32Arr(64);
+        var w = new Int32Array(64);
         var v;
         var s0;
         var s1;
@@ -1554,7 +1491,7 @@ var Base64 = (function () {
             h6 = (h6 + g) & 0xffffffff;
             h7 = (h7 + h) & 0xffffffff;
         }
-        var hash = Uint8Arr(32);
+        var hash = new Uint8Array(32);
         for (i = 0; i < 4; i++) {
             hash[i] = (h0 >>> (8 * (3 - i))) & 0xff;
             hash[i + 4] = (h1 >>> (8 * (3 - i))) & 0xff;
@@ -1565,16 +1502,65 @@ var Base64 = (function () {
             hash[i + 24] = (h6 >>> (8 * (3 - i))) & 0xff;
             hash[i + 28] = (h7 >>> (8 * (3 - i))) & 0xff;
         }
-        if (asArray)
-            return hash;
+        return hash;
+    }
+    /*creates a Diffie Hellman Merkle session key from your own secret private key and someone elses public key*/
+    function getSessionKey(privateKey, publicKey) {
+        return bigInt(publicKey).modPow(b64.number_hash(privateKey, 100), prime).toString();
+    }
+    b64.number_hash = function (str, requiredLength) {
+        requiredLength = requiredLength && !isNaN(requiredLength) && isFinite(requiredLength) && requiredLength > 0 ? requiredLength : 10;
+        var out = "";
+        for (var a = 0, h = 0, s = "", i = void 0, chr = void 0, len = void 0; out.length < requiredLength; a++) {
+            for (i = 0, len = str.length; i < len; i++) {
+                chr = str.charCodeAt(i);
+                h = (h << 5) - h + chr;
+                h |= 0; // Convert to 32bit integer
+            }
+            s = String(h + Math.pow(2, 31));
+            while (s.length < 10)
+                s = "0" + h;
+            out += s.slice(2);
+        }
+        return out.slice(0, requiredLength);
+    };
+    b64.rand = function (requiredLength, additionalEntropy) {
+        function random12Digit() {
+            return String(Math.floor(Math.random() * (((Math.pow(10, 16)) - 1) - Math.pow(10, 15) + 1) + Math.pow(10, 15))).slice(3, 15);
+        }
+        var len = requiredLength && !isNaN(requiredLength) && isFinite(requiredLength) && requiredLength > 0 ? requiredLength : 8, ent = additionalEntropy ? String(additionalEntropy) : random12Digit(), num = 0, str = "", out = "";
+        if (len > 300)
+            len = 300; //physical limit
+        while (out.length < len) {
+            num = Number(random12Digit());
+            for (var b = 0; b < 4300; b++)
+                num += Number(String(new Date().getTime()).slice(7)); //generate 32 bits of entropy
+            str = String(num);
+            while (str.charAt(0) === "0" && str.length > 1)
+                str = str.slice(1);
+            str = b64.number_hash(ent + str, 8); //generate 32 bit number from 32 bits of entropy (plus additionalEntropy)
+            out += str; //string all the numbers together to form required length
+        }
+        while (out.charAt(0) === "0" && out.length > 1)
+            out = out.slice(1);
+        //in some cases during the last round through the "while" statement a number starting with 3 or more 0's will be chosen which results in too short an output number
+        if (out.length < len)
+            return b64.rand(len, ent + random12Digit()); //try again
+        return out.slice(0, len);
+    };
+    b64.hash = function (message, salt) {
+        message = message ? message : "";
+        if (salt)
+            message = String(message) + String(salt);
         else
-            return toHex(hash);
+            message = String(message.length + 1231) + String(message);
+        return toHex(sha256(message));
     };
     b64.hmac = function (message, key) {
         key = String(key);
         var k;
         if (key.length > 32)
-            k = b64.hash(key, true);
+            k = sha256(key);
         else {
             var s = unescape(encodeURIComponent(key)); // UTF-8
             k = new Uint8Array(32);
