@@ -1,11 +1,11 @@
-"use strict";
+﻿"use strict";
 /*!
 * Base64 performs several functions:
 * Compress a string to base64, Diffie Hellman Merkle key exchange,
 * SHA256 hash, and generate high entropy random numbers.
 * Generated public Keys are numeric and 300 digits in length (~1000 bit equivelent).
 *
-* Last Modified: August 11, 2020
+* Last Modified: August 12, 2020
 * Copyright (C) 2020 Graeme Goodkey github.com/ggoodkey
 * All rights reserved
 *
@@ -22,10 +22,10 @@
 * https://www.npmjs.com/package/big-integer/
 *
 */
-var Base64 = {};
-(function () {
+var Base64 = (function () {
+    var b64 = {};
     /* eslint-disable */
-    Base64.Version = 1.2;
+    b64.Version = 1.2;
     /*base 64 charectors*/
     var charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=", hexAlf = '00,01,02,03,04,05,06,07,08,09,0a,0b,0c,0d,0e,0f,10,11,12,13,14,15,16,17,18,19,1a,1b,1c,1d,1e,1f,20,21,22,23,24,25,26,27,28,29,2a,2b,2c,2d,2e,2f,30,31,32,33,34,35,36,37,38,39,3a,3b,3c,3d,3e,3f,40,41,42,43,44,45,46,47,48,49,4a,4b,4c,4d,4e,4f,50,51,52,53,54,55,56,57,58,59,5a,5b,5c,5d,5e,5f,60,61,62,63,64,65,66,67,68,69,6a,6b,6c,6d,6e,6f,70,71,72,73,74,75,76,77,78,79,7a,7b,7c,7d,7e,7f,80,81,82,83,84,85,86,87,88,89,8a,8b,8c,8d,8e,8f,90,91,92,93,94,95,96,97,98,99,9a,9b,9c,9d,9e,9f,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,aa,ab,ac,ad,ae,af,b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,ba,bb,bc,bd,be,bf,c0,c1,c2,c3,c4,c5,c6,c7,c8,c9,ca,cb,cc,cd,ce,cf,d0,d1,d2,d3,d4,d5,d6,d7,d8,d9,da,db,dc,dd,de,df,e0,e1,e2,e3,e4,e5,e6,e7,e8,e9,ea,eb,ec,ed,ee,ef,f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,fa,fb,fc,fd,fe,ff'.split(','), 
     //100 digit fast
@@ -503,9 +503,7 @@ var Base64 = {};
         }
     }
     var bigInt = (function (undefined) {
-        "use strict";
         var BASE = 1e7, LOG_BASE = 7, MAX_INT = 9007199254740992, MAX_INT_ARR = smallToArray(MAX_INT), DEFAULT_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
-        //		var supportsNativeBigInt = typeof BigInt === "function";
         function Integer(v, radix, alphabet, caseSensitive) {
             if (typeof v === "undefined")
                 return Integer[0];
@@ -525,10 +523,6 @@ var Base64 = {};
             this.isSmall = true;
         }
         SmallInteger.prototype = Object.create(Integer.prototype);
-        // function NativeBigInt(this, value) {
-        // 	this.value = value;
-        // }
-        // NativeBigInt.prototype = Object.create(Integer.prototype);
         function isPrecise(n) {
             return -MAX_INT < n && n < MAX_INT;
         }
@@ -633,10 +627,6 @@ var Base64 = {};
             return new BigInteger(addSmall(b, Math.abs(a)), a < 0);
         };
         SmallInteger.prototype.plus = SmallInteger.prototype.add;
-        // NativeBigInt.prototype.add = function (v) {
-        // 	return new NativeBigInt(this.value + parseValue(v).value);
-        // }
-        // NativeBigInt.prototype.plus = NativeBigInt.prototype.add;
         function subtract(a, b) {
             var a_l = a.length, b_l = b.length, r = new Array(a_l), borrow = 0, base = BASE, i, difference;
             for (i = 0; i < b_l; i++) {
@@ -722,10 +712,6 @@ var Base64 = {};
             return subtractSmall(b, Math.abs(a), a >= 0);
         };
         SmallInteger.prototype.minus = SmallInteger.prototype.subtract;
-        // NativeBigInt.prototype.subtract = function (v) {
-        // 	return new NativeBigInt(this.value - parseValue(v).value);
-        // }
-        // NativeBigInt.prototype.minus = NativeBigInt.prototype.subtract;
         BigInteger.prototype.negate = function () {
             return new BigInteger(this.value, !this.sign);
         };
@@ -735,18 +721,12 @@ var Base64 = {};
             small.sign = !sign;
             return small;
         };
-        // NativeBigInt.prototype.negate = function () {
-        // 	return new NativeBigInt(-this.value);
-        // }
         BigInteger.prototype.abs = function () {
             return new BigInteger(this.value, false);
         };
         SmallInteger.prototype.abs = function () {
             return new SmallInteger(Math.abs(this.value));
         };
-        // NativeBigInt.prototype.abs = function () {
-        // 	return new NativeBigInt(this.value >= 0 ? this.value : -this.value);
-        // }
         function multiplyLong(a, b) {
             var a_l = a.length, b_l = b.length, l = a_l + b_l, r = createArray(l), base = BASE, product, carry, i, a_i, b_j;
             for (i = 0; i < a_l; ++i) {
@@ -842,10 +822,6 @@ var Base64 = {};
             return parseValue(v)._multiplyBySmall(this);
         };
         SmallInteger.prototype.times = SmallInteger.prototype.multiply;
-        // NativeBigInt.prototype.multiply = function (v) {
-        // 	return new NativeBigInt(this.value * parseValue(v).value);
-        // }
-        // NativeBigInt.prototype.times = NativeBigInt.prototype.multiply;
         function square(a) {
             //console.assert(2 * BASE * BASE < MAX_INT);
             var l = a.length, r = createArray(l + l), base = BASE, product, carry, i, a_i, a_j;
@@ -872,9 +848,6 @@ var Base64 = {};
                 return new SmallInteger(value);
             return new BigInteger(square(smallToArray(Math.abs(this.value))), false);
         };
-        // NativeBigInt.prototype.square = function (v) {
-        // 	return new NativeBigInt(this.value * this.value);
-        // }
         function divMod1(a, b) {
             var a_l = a.length, b_l = b.length, base = BASE, result = createArray(b.length), divisorMostSignificantDigit = b[b_l - 1], 
             // normalization
@@ -970,9 +943,6 @@ var Base64 = {};
         }
         function divModAny(self, v) {
             var value, n = parseValue(v);
-            // if (supportsNativeBigInt) {
-            // 	return [new NativeBigInt(self.value / n.value), new NativeBigInt(self.value % n.value)];
-            // }
             var a = self.value, b = n.value;
             var quotient;
             if (b === 0)
@@ -1040,74 +1010,14 @@ var Base64 = {};
             };
         };
         SmallInteger.prototype.divmod = BigInteger.prototype.divmod;
-        // NativeBigInt.prototype.divmod = SmallInteger.prototype.divmod = BigInteger.prototype.divmod;
         BigInteger.prototype.divide = function (v) {
             return divModAny(this, v)[0];
         };
-        // NativeBigInt.prototype.over = NativeBigInt.prototype.divide = function (v) {
-        // 	return new NativeBigInt(this.value / parseValue(v).value);
-        // };
         SmallInteger.prototype.over = SmallInteger.prototype.divide = BigInteger.prototype.over = BigInteger.prototype.divide;
         BigInteger.prototype.mod = function (v) {
             return divModAny(this, v)[1];
         };
-        // NativeBigInt.prototype.mod = NativeBigInt.prototype.remainder = function (v) {
-        // 	return new NativeBigInt(this.value % parseValue(v).value);
-        // };
         SmallInteger.prototype.remainder = SmallInteger.prototype.mod = BigInteger.prototype.remainder = BigInteger.prototype.mod;
-        // BigInteger.prototype.pow = function (v) {
-        // 	var n = parseValue(v),
-        // 		a = this.value,
-        // 		b = n.value,
-        // 		value, x, y;
-        // 	if (b === 0) return Integer[1];
-        // 	if (a === 0) return Integer[0];
-        // 	if (a === 1) return Integer[1];
-        // 	if (a === -1) return n.isEven() ? Integer[1] : Integer[-1];
-        // 	if (n.sign) {
-        // 		return Integer[0];
-        // 	}
-        // 	if (!n.isSmall) throw new Error("The exponent " + n.toString() + " is too large.");
-        // 	if (this.isSmall) {
-        // 		if (isPrecise(value = Math.pow(a, b)))
-        // 			return new SmallInteger(truncate(value));
-        // 	}
-        // 	x = this;
-        // 	y = Integer[1];
-        // 	while (true) {
-        // 		if (b & 1 === 1) {
-        // 			y = y.times(x);
-        // 			--b;
-        // 		}
-        // 		if (b === 0) break;
-        // 		b /= 2;
-        // 		x = x.square();
-        // 	}
-        // 	return y;
-        // };
-        // SmallInteger.prototype.pow = BigInteger.prototype.pow;
-        // NativeBigInt.prototype.pow = function (v) {
-        // 	var n = parseValue(v);
-        // 	var a = this.value, b = n.value;
-        // 	var _0 = BigInt(0), _1 = BigInt(1), _2 = BigInt(2);
-        // 	if (b === _0) return Integer[1];
-        // 	if (a === _0) return Integer[0];
-        // 	if (a === _1) return Integer[1];
-        // 	if (a === BigInt(-1)) return n.isEven() ? Integer[1] : Integer[-1];
-        // 	if (n.isNegative()) return new NativeBigInt(_0);
-        // 	var x = this;
-        // 	var y = Integer[1];
-        // 	while (true) {
-        // 		if ((b & _1) === _1) {
-        // 			y = y.times(x);
-        // 			--b;
-        // 		}
-        // 		if (b === _0) break;
-        // 		b /= _2;
-        // 		x = x.square();
-        // 	}
-        // 	return y;
-        // }
         BigInteger.prototype.modPow = function (exp, mod) {
             exp = parseValue(exp);
             mod = parseValue(mod);
@@ -1125,7 +1035,6 @@ var Base64 = {};
             return r;
         };
         SmallInteger.prototype.modPow = BigInteger.prototype.modPow;
-        // NativeBigInt.prototype.modPow = SmallInteger.prototype.modPow = BigInteger.prototype.modPow;
         function compareAbs(a, b) {
             if (a.length !== b.length) {
                 return a.length > b.length ? 1 : -1;
@@ -1150,13 +1059,6 @@ var Base64 = {};
             }
             return -1;
         };
-        // NativeBigInt.prototype.compareAbs = function (v) {
-        // 	var a = this.value;
-        // 	var b = parseValue(v).value;
-        // 	a = a >= 0 ? a : -a;
-        // 	b = b >= 0 ? b : -b;
-        // 	return a === b ? 0 : a > b ? 1 : -1;
-        // }
         BigInteger.prototype.compare = function (v) {
             // See discussion about comparison with Infinity:
             // https://github.com/peterolson/BigInteger.js/issues/61
@@ -1193,176 +1095,40 @@ var Base64 = {};
             return a < 0 ? 1 : -1;
         };
         SmallInteger.prototype.compareTo = SmallInteger.prototype.compare;
-        // NativeBigInt.prototype.compare = function (v) {
-        // 	if (v === Infinity) {
-        // 		return -1;
-        // 	}
-        // 	if (v === -Infinity) {
-        // 		return 1;
-        // 	}
-        // 	var a = this.value;
-        // 	var b = parseValue(v).value;
-        // 	return a === b ? 0 : a > b ? 1 : -1;
-        // }
-        // NativeBigInt.prototype.compareTo = NativeBigInt.prototype.compare;
         BigInteger.prototype.equals = function (v) {
             return this.compare(v) === 0;
         };
         SmallInteger.prototype.eq = SmallInteger.prototype.equals = BigInteger.prototype.eq = BigInteger.prototype.equals;
-        // NativeBigInt.prototype.eq = NativeBigInt.prototype.equals = SmallInteger.prototype.eq = SmallInteger.prototype.equals = BigInteger.prototype.eq = BigInteger.prototype.equals;
-        // BigInteger.prototype.notEquals = function (v) {
-        // 	return this.compare(v) !== 0;
-        // };
-        // NativeBigInt.prototype.neq = NativeBigInt.prototype.notEquals = SmallInteger.prototype.neq = SmallInteger.prototype.notEquals = BigInteger.prototype.neq = BigInteger.prototype.notEquals;
-        // BigInteger.prototype.greater = function (v) {
-        // 	return this.compare(v) > 0;
-        // };
-        // NativeBigInt.prototype.gt = NativeBigInt.prototype.greater = SmallInteger.prototype.gt = SmallInteger.prototype.greater = BigInteger.prototype.gt = BigInteger.prototype.greater;
-        // BigInteger.prototype.lesser = function (v) {
-        // 	return this.compare(v) < 0;
-        // };
-        // NativeBigInt.prototype.lt = NativeBigInt.prototype.lesser = SmallInteger.prototype.lt = SmallInteger.prototype.lesser = BigInteger.prototype.lt = BigInteger.prototype.lesser;
-        // BigInteger.prototype.greaterOrEquals = function (v) {
-        // 	return this.compare(v) >= 0;
-        // };
-        // NativeBigInt.prototype.geq = NativeBigInt.prototype.greaterOrEquals = SmallInteger.prototype.geq = SmallInteger.prototype.greaterOrEquals = BigInteger.prototype.geq = BigInteger.prototype.greaterOrEquals;
-        // BigInteger.prototype.lesserOrEquals = function (v) {
-        // 	return this.compare(v) <= 0;
-        // };
-        // NativeBigInt.prototype.leq = NativeBigInt.prototype.lesserOrEquals = SmallInteger.prototype.leq = SmallInteger.prototype.lesserOrEquals = BigInteger.prototype.leq = BigInteger.prototype.lesserOrEquals;
-        // BigInteger.prototype.isEven = function () {
-        // 	return (this.value[0] & 1) === 0;
-        // };
-        // SmallInteger.prototype.isEven = function () {
-        // 	return (this.value & 1) === 0;
-        // };
-        // NativeBigInt.prototype.isEven = function () {
-        // 	return (this.value & BigInt(1)) === BigInt(0);
-        // }
         BigInteger.prototype.isOdd = function () {
             return (this.value[0] & 1) === 1;
         };
         SmallInteger.prototype.isOdd = function () {
             return (this.value & 1) === 1;
         };
-        // NativeBigInt.prototype.isOdd = function () {
-        // 	return (this.value & BigInt(1)) === BigInt(1);
-        // }
         BigInteger.prototype.isPositive = function () {
             return !this.sign;
         };
         SmallInteger.prototype.isPositive = function () {
             return this.value > 0;
         };
-        // NativeBigInt.prototype.isPositive = SmallInteger.prototype.isPositive;
         BigInteger.prototype.isNegative = function () {
             return this.sign;
         };
         SmallInteger.prototype.isNegative = function () {
             return this.value < 0;
         };
-        // NativeBigInt.prototype.isNegative = SmallInteger.prototype.isNegative;
         BigInteger.prototype.isUnit = function () {
             return false;
         };
         SmallInteger.prototype.isUnit = function () {
             return Math.abs(this.value) === 1;
         };
-        // NativeBigInt.prototype.isUnit = function () {
-        // 	return this.abs().value === BigInt(1);
-        // }
         BigInteger.prototype.isZero = function () {
             return false;
         };
         SmallInteger.prototype.isZero = function () {
             return this.value === 0;
         };
-        // NativeBigInt.prototype.isZero = function () {
-        // 	return this.value === BigInt(0);
-        // }
-        // BigInteger.prototype.isDivisibleBy = function (v) {
-        // 	var n = parseValue(v);
-        // 	if (n.isZero()) return false;
-        // 	if (n.isUnit()) return true;
-        // 	if (n.compareAbs(2) === 0) return this.isEven();
-        // 	return this.mod(n).isZero();
-        // };
-        // NativeBigInt.prototype.isDivisibleBy = SmallInteger.prototype.isDivisibleBy = BigInteger.prototype.isDivisibleBy;
-        // function isBasicPrime(v) {
-        // 	var n = v.abs();
-        // 	if (n.isUnit()) return false;
-        // 	if (n.equals(2) || n.equals(3) || n.equals(5)) return true;
-        // 	if (n.isEven() || n.isDivisibleBy(3) || n.isDivisibleBy(5)) return false;
-        // 	if (n.lesser(49)) return true;
-        // 	// we don't know if it's prime: let the other functions figure it out
-        // }
-        // function millerRabinTest(n, a) {
-        // 	var nPrev = n.prev(),
-        // 		b = nPrev,
-        // 		r = 0,
-        // 		d, t, i, x;
-        // 	while (b.isEven()) b = b.divide(2), r++;
-        // 	next: for (i = 0; i < a.length; i++) {
-        // 		if (n.lesser(a[i])) continue;
-        // 		x = bigInt(a[i]).modPow(b, n);
-        // 		if (x.isUnit() || x.equals(nPrev)) continue;
-        // 		for (d = r - 1; d != 0; d--) {
-        // 			x = x.square().mod(n);
-        // 			if (x.isUnit()) return false;
-        // 			if (x.equals(nPrev)) continue next;
-        // 		}
-        // 		return false;
-        // 	}
-        // 	return true;
-        // }
-        // // Set "strict" to true to force GRH-supported lower bound of 2*log(N)^2
-        // BigInteger.prototype.isPrime = function (strict) {
-        // 	var isPrime = isBasicPrime(this);
-        // 	if (isPrime !== undefined) return isPrime;
-        // 	var n = this.abs();
-        // 	var bits = n.bitLength();
-        // 	if (bits <= 64)
-        // 		return millerRabinTest(n, [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37]);
-        // 	var logN = Math.log(2) * bits.toJSNumber();
-        // 	var t = Math.ceil((strict === true) ? (2 * Math.pow(logN, 2)) : logN);
-        // 	for (var a = [], i = 0; i < t; i++) {
-        // 		a.push(bigInt(i + 2));
-        // 	}
-        // 	return millerRabinTest(n, a);
-        // };
-        // NativeBigInt.prototype.isPrime = SmallInteger.prototype.isPrime = BigInteger.prototype.isPrime;
-        // BigInteger.prototype.isProbablePrime = function (iterations) {
-        // 	var isPrime = isBasicPrime(this);
-        // 	if (isPrime !== undefined) return isPrime;
-        // 	var n = this.abs();
-        // 	var t = iterations === undefined ? 5 : iterations;
-        // 	for (var a = [], i = 0; i < t; i++) {
-        // 		a.push(bigInt.randBetween(2, n.minus(2)));
-        // 	}
-        // 	return millerRabinTest(n, a);
-        // };
-        // NativeBigInt.prototype.isProbablePrime = SmallInteger.prototype.isProbablePrime = BigInteger.prototype.isProbablePrime;
-        // BigInteger.prototype.modInv = function (n) {
-        // 	var t = bigInt.zero, newT = bigInt.one, r = parseValue(n), newR = this.abs(), q, lastT, lastR;
-        // 	while (!newR.isZero()) {
-        // 		q = r.divide(newR);
-        // 		lastT = t;
-        // 		lastR = r;
-        // 		t = newT;
-        // 		r = newR;
-        // 		newT = lastT.subtract(q.multiply(newT));
-        // 		newR = lastR.subtract(q.multiply(newR));
-        // 	}
-        // 	if (!r.isUnit()) throw new Error(this.toString() + " and " + n.toString() + " are not co-prime");
-        // 	if (t.compare(0) === -1) {
-        // 		t = t.add(n);
-        // 	}
-        // 	if (this.isNegative()) {
-        // 		return t.negate();
-        // 	}
-        // 	return t;
-        // };
-        // NativeBigInt.prototype.modInv = SmallInteger.prototype.modInv = BigInteger.prototype.modInv;
         BigInteger.prototype.next = function () {
             var value = this.value;
             if (this.sign) {
@@ -1376,197 +1142,6 @@ var Base64 = {};
                 return new SmallInteger(value + 1);
             return new BigInteger(MAX_INT_ARR, false);
         };
-        // NativeBigInt.prototype.next = function () {
-        // 	return new NativeBigInt(this.value + BigInt(1));
-        // }
-        // BigInteger.prototype.prev = function () {
-        // 	var value = this.value;
-        // 	if (this.sign) {
-        // 		return new BigInteger(addSmall(value, 1), true);
-        // 	}
-        // 	return subtractSmall(value, 1, this.sign);
-        // };
-        // SmallInteger.prototype.prev = function () {
-        // 	var value = this.value;
-        // 	if (value - 1 > -MAX_INT) return new SmallInteger(value - 1);
-        // 	return new BigInteger(MAX_INT_ARR, true);
-        // };
-        // NativeBigInt.prototype.prev = function () {
-        // 	return new NativeBigInt(this.value - BigInt(1));
-        // }
-        // var powersOfTwo = [1];
-        // while (2 * powersOfTwo[powersOfTwo.length - 1] <= BASE) powersOfTwo.push(2 * powersOfTwo[powersOfTwo.length - 1]);
-        // var powers2Length = powersOfTwo.length, highestPower2 = powersOfTwo[powers2Length - 1];
-        // function shift_isSmall(n) {
-        // 	return Math.abs(n) <= BASE;
-        // }
-        // BigInteger.prototype.shiftLeft = function (v) {
-        // 	var n = parseValue(v).toJSNumber();
-        // 	if (!shift_isSmall(n)) {
-        // 		throw new Error(String(n) + " is too large for shifting.");
-        // 	}
-        // 	if (n < 0) return this.shiftRight(-n);
-        // 	var result = this;
-        // 	if (result.isZero()) return result;
-        // 	while (n >= powers2Length) {
-        // 		result = result.multiply(highestPower2);
-        // 		n -= powers2Length - 1;
-        // 	}
-        // 	return result.multiply(powersOfTwo[n]);
-        // };
-        // NativeBigInt.prototype.shiftLeft = SmallInteger.prototype.shiftLeft = BigInteger.prototype.shiftLeft;
-        // BigInteger.prototype.shiftRight = function (v) {
-        // 	var remQuo;
-        // 	var n = parseValue(v).toJSNumber();
-        // 	if (!shift_isSmall(n)) {
-        // 		throw new Error(String(n) + " is too large for shifting.");
-        // 	}
-        // 	if (n < 0) return this.shiftLeft(-n);
-        // 	var result = this;
-        // 	while (n >= powers2Length) {
-        // 		if (result.isZero() || (result.isNegative() && result.isUnit())) return result;
-        // 		remQuo = divModAny(result, highestPower2);
-        // 		result = remQuo[1].isNegative() ? remQuo[0].prev() : remQuo[0];
-        // 		n -= powers2Length - 1;
-        // 	}
-        // 	remQuo = divModAny(result, powersOfTwo[n]);
-        // 	return remQuo[1].isNegative() ? remQuo[0].prev() : remQuo[0];
-        // };
-        // NativeBigInt.prototype.shiftRight = SmallInteger.prototype.shiftRight = BigInteger.prototype.shiftRight;
-        // function bitwise(x, y, fn) {
-        // 	y = parseValue(y);
-        // 	var xSign = x.isNegative(), ySign = y.isNegative();
-        // 	var xRem = xSign ? x.not() : x,
-        // 		yRem = ySign ? y.not() : y;
-        // 	var xDigit = 0, yDigit = 0;
-        // 	var xDivMod = null, yDivMod = null;
-        // 	var result = [];
-        // 	while (!xRem.isZero() || !yRem.isZero()) {
-        // 		xDivMod = divModAny(xRem, highestPower2);
-        // 		xDigit = xDivMod[1].toJSNumber();
-        // 		if (xSign) {
-        // 			xDigit = highestPower2 - 1 - xDigit; // two's complement for negative numbers
-        // 		}
-        // 		yDivMod = divModAny(yRem, highestPower2);
-        // 		yDigit = yDivMod[1].toJSNumber();
-        // 		if (ySign) {
-        // 			yDigit = highestPower2 - 1 - yDigit; // two's complement for negative numbers
-        // 		}
-        // 		xRem = xDivMod[0];
-        // 		yRem = yDivMod[0];
-        // 		result.push(fn(xDigit, yDigit));
-        // 	}
-        // 	var sum = fn(xSign ? 1 : 0, ySign ? 1 : 0) !== 0 ? bigInt(-1) : bigInt(0);
-        // 	for (var i = result.length - 1; i >= 0; i -= 1) {
-        // 		sum = sum.multiply(highestPower2).add(bigInt(result[i]));
-        // 	}
-        // 	return sum;
-        // }
-        // BigInteger.prototype.not = function () {
-        // 	return this.negate().prev();
-        // };
-        // NativeBigInt.prototype.not = SmallInteger.prototype.not = BigInteger.prototype.not;
-        // BigInteger.prototype.and = function (n) {
-        // 	return bitwise(this, n, function (a, b) { return a & b; });
-        // };
-        // NativeBigInt.prototype.and = SmallInteger.prototype.and = BigInteger.prototype.and;
-        // BigInteger.prototype.or = function (n) {
-        // 	return bitwise(this, n, function (a, b) { return a | b; });
-        // };
-        // NativeBigInt.prototype.or = SmallInteger.prototype.or = BigInteger.prototype.or;
-        // BigInteger.prototype.xor = function (n) {
-        // 	return bitwise(this, n, function (a, b) { return a ^ b; });
-        // };
-        // NativeBigInt.prototype.xor = SmallInteger.prototype.xor = BigInteger.prototype.xor;
-        // var LOBMASK_I = 1 << 30, LOBMASK_BI = (BASE & -BASE) * (BASE & -BASE) | LOBMASK_I;
-        // function roughLOB(n) { // get lowestOneBit (rough)
-        // 	// SmallInteger: return Min(lowestOneBit(n), 1 << 30)
-        // 	// BigInteger: return Min(lowestOneBit(n), 1 << 14) [BASE=1e7]
-        // 	var v = n.value,
-        // 		x = typeof v === "number" ? v | LOBMASK_I :
-        // 			typeof v === "bigint" ? v | BigInt(LOBMASK_I) :
-        // 				v[0] + v[1] * BASE | LOBMASK_BI;
-        // 	return x & -x;
-        // }
-        // function integerLogarithm(value, base) {
-        // 	if (base.compareTo(value) <= 0) {
-        // 		var tmp = integerLogarithm(value, base.square(base));
-        // 		var p = tmp.p;
-        // 		var e = tmp.e;
-        // 		var t = p.multiply(base);
-        // 		return t.compareTo(value) <= 0 ? { p: t, e: e * 2 + 1 } : { p: p, e: e * 2 };
-        // 	}
-        // 	return { p: bigInt(1), e: 0 };
-        // }
-        // BigInteger.prototype.bitLength = function () {
-        // 	var n = this;
-        // 	if (n.compareTo(bigInt(0)) < 0) {
-        // 		n = n.negate().subtract(bigInt(1));
-        // 	}
-        // 	if (n.compareTo(bigInt(0)) === 0) {
-        // 		return bigInt(0);
-        // 	}
-        // 	return bigInt(integerLogarithm(n, bigInt(2)).e).add(bigInt(1));
-        // }
-        // NativeBigInt.prototype.bitLength = SmallInteger.prototype.bitLength = BigInteger.prototype.bitLength;
-        // function max(a, b) {
-        // 	a = parseValue(a);
-        // 	b = parseValue(b);
-        // 	return a.greater(b) ? a : b;
-        // }
-        // function min(a, b) {
-        // 	a = parseValue(a);
-        // 	b = parseValue(b);
-        // 	return a.lesser(b) ? a : b;
-        // }
-        // function gcd(a, b) {
-        // 	a = parseValue(a).abs();
-        // 	b = parseValue(b).abs();
-        // 	if (a.equals(b)) return a;
-        // 	if (a.isZero()) return b;
-        // 	if (b.isZero()) return a;
-        // 	var c = Integer[1], d, t;
-        // 	while (a.isEven() && b.isEven()) {
-        // 		d = min(roughLOB(a), roughLOB(b));
-        // 		a = a.divide(d);
-        // 		b = b.divide(d);
-        // 		c = c.multiply(d);
-        // 	}
-        // 	while (a.isEven()) {
-        // 		a = a.divide(roughLOB(a));
-        // 	}
-        // 	do {
-        // 		while (b.isEven()) {
-        // 			b = b.divide(roughLOB(b));
-        // 		}
-        // 		if (a.greater(b)) {
-        // 			t = b; b = a; a = t;
-        // 		}
-        // 		b = b.subtract(a);
-        // 	} while (!b.isZero());
-        // 	return c.isUnit() ? a : a.multiply(c);
-        // }
-        // function lcm(a, b) {
-        // 	a = parseValue(a).abs();
-        // 	b = parseValue(b).abs();
-        // 	return a.divide(gcd(a, b)).multiply(b);
-        // }
-        // function randBetween(a, b) {
-        // 	a = parseValue(a);
-        // 	b = parseValue(b);
-        // 	var low = min(a, b), high = max(a, b);
-        // 	var range = high.subtract(low).add(1);
-        // 	if (range.isSmall) return low.add(Math.floor(Math.random() * range));
-        // 	var digits = toBase(range, BASE).value;
-        // 	var result = [], restricted = true;
-        // 	for (var i = 0; i < digits.length; i++) {
-        // 		var top = restricted ? digits[i] : BASE;
-        // 		var digit = truncate(Math.random() * top);
-        // 		result.push(digit);
-        // 		if (digit < top) restricted = false;
-        // 	}
-        // 	return low.add(Integer.fromArray(result, BASE, false));
-        // }
         var parseBase = function (text, base, alphabet, caseSensitive) {
             alphabet = alphabet || DEFAULT_ALPHABET;
             text = String(text);
@@ -1686,15 +1261,6 @@ var Base64 = {};
                 return stringify(x, alphabet);
             }).join('');
         }
-        // BigInteger.prototype.toArray = function (radix) {
-        // 	return toBase(this, radix);
-        // };
-        // SmallInteger.prototype.toArray = function (radix) {
-        // 	return toBase(this, radix);
-        // };
-        // NativeBigInt.prototype.toArray = function (radix) {
-        // 	return toBase(this, radix);
-        // };
         BigInteger.prototype.toString = function (radix, alphabet) {
             if (radix === undefined)
                 radix = 10;
@@ -1715,8 +1281,6 @@ var Base64 = {};
                 return toBaseString(this, radix, alphabet);
             return String(this.value);
         };
-        // NativeBigInt.prototype.toString = SmallInteger.prototype.toString;
-        // NativeBigInt.prototype.toJSON = BigInteger.prototype.toJSON = SmallInteger.prototype.toJSON = function () { return this.toString(); }
         BigInteger.prototype.valueOf = function () {
             return parseInt(this.toString(), 10);
         };
@@ -1725,15 +1289,11 @@ var Base64 = {};
             return this.value;
         };
         SmallInteger.prototype.toJSNumber = SmallInteger.prototype.valueOf;
-        // NativeBigInt.prototype.valueOf = NativeBigInt.prototype.toJSNumber = function () {
-        // 	return parseInt(this.toString(), 10);
-        // }
         function parseStringValue(v) {
             if (isPrecise(+v)) {
                 var x = +v;
                 if (x === truncate(x))
                     return new SmallInteger(x);
-                //	return supportsNativeBigInt ? new NativeBigInt(BigInt(x)) : new SmallInteger(x);
                 throw new Error("Invalid integer: " + v);
             }
             var sign = v[0] === "-";
@@ -1763,9 +1323,6 @@ var Base64 = {};
             var isValid = /^([0-9][0-9]*)$/.test(v);
             if (!isValid)
                 throw new Error("Invalid integer: " + v);
-            // if (supportsNativeBigInt) {
-            // 	return new NativeBigInt(BigInt(sign ? "-" + v : v));
-            // }
             var r = [], max = v.length, l = LOG_BASE, min = max - l;
             while (max > 0) {
                 r.push(+v.slice(min, max));
@@ -1778,9 +1335,6 @@ var Base64 = {};
             return new BigInteger(r, sign);
         }
         function parseNumberValue(v) {
-            // if (supportsNativeBigInt) {
-            // 	return new NativeBigInt(BigInt(v));
-            // }
             if (isPrecise(v)) {
                 if (v !== truncate(v))
                     throw new Error(v + " is not an integer.");
@@ -1795,9 +1349,6 @@ var Base64 = {};
             if (typeof v === "string") {
                 return parseStringValue(v);
             }
-            // if (typeof v === "bigint") {
-            // 	return new NativeBigInt(v);
-            // }
             return v;
         }
         // Pre-define numbers in range [-999,999]
@@ -1806,28 +1357,14 @@ var Base64 = {};
             if (i > 0)
                 Integer[-i] = parseValue(-i);
         }
-        // Backwards compatibility
-        // Integer.one = Integer[1];
-        // Integer.zero = Integer[0];
-        // Integer.minusOne = Integer[-1];
-        // Integer.max = max;
-        // Integer.min = min;
-        // Integer.gcd = gcd;
-        // Integer.lcm = lcm;
-        // Integer.isInstance = function (x) { return x instanceof BigInteger || x instanceof SmallInteger || x instanceof NativeBigInt; };
-        // Integer.randBetween = randBetween;
-        // Integer.fromArray = function (digits, base, isNegative) {
-        // 	return parseBaseFromArray(digits.map(parseValue), parseValue(base || 10), isNegative);
-        // };
         return Integer;
     })();
     /*creates a Diffie Hellman Merkle session key from your own secret private key and someone elses public key*/
     function getSessionKey(privateKey, publicKey) {
-        return bigInt(publicKey).modPow(Base64.number_hash(privateKey, 100), prime).toString();
+        return bigInt(publicKey).modPow(b64.number_hash(privateKey, 100), prime).toString();
     }
-    /*converts any string to a positive integer of the requiredLength*/
-    Base64.number_hash = function (str, requiredLength) {
-        requiredLength = !isNaN(parseFloat(requiredLength)) && isFinite(requiredLength) && requiredLength > 0 ? parseInt(requiredLength) : 10;
+    b64.number_hash = function (str, requiredLength) {
+        requiredLength = requiredLength && !isNaN(requiredLength) && isFinite(requiredLength) && requiredLength > 0 ? requiredLength : 10;
         var out = "";
         for (var a = 0, h = 0, s = "", i = void 0, chr = void 0, len = void 0; out.length < requiredLength; a++) {
             //str = Base64.hash(str);
@@ -1843,13 +1380,11 @@ var Base64 = {};
         }
         return out.slice(0, requiredLength);
     };
-    /*	generate a random number of the "requiredLength" (input a Number from 1-300),
-        based on timing, proccessor speed, and any "additionalEntropy" you want to provide (optional)*/
-    Base64.rand = function (requiredLength, additionalEntropy) {
+    b64.rand = function (requiredLength, additionalEntropy) {
         function random12Digit() {
             return String(Math.floor(Math.random() * (((Math.pow(10, 16)) - 1) - Math.pow(10, 15) + 1) + Math.pow(10, 15))).slice(3, 15);
         }
-        var len = !isNaN(parseFloat(requiredLength)) && isFinite(requiredLength) && requiredLength > 0 ? parseInt(requiredLength, 10) : 8, ent = additionalEntropy ? String(additionalEntropy) : random12Digit(), num = 0, str = "", out = "";
+        var len = requiredLength && !isNaN(requiredLength) && isFinite(requiredLength) && requiredLength > 0 ? requiredLength : 8, ent = additionalEntropy ? String(additionalEntropy) : random12Digit(), num = 0, str = "", out = "";
         if (len > 300)
             len = 300; //physical limit
         while (out.length < len) {
@@ -1859,19 +1394,17 @@ var Base64 = {};
             str = String(num);
             while (str.charAt(0) === "0" && str.length > 1)
                 str = str.slice(1);
-            str = Base64.number_hash(ent + str, 8); //generate 32 bit number from 32 bits of entropy (plus additionalEntropy)
+            str = b64.number_hash(ent + str, 8); //generate 32 bit number from 32 bits of entropy (plus additionalEntropy)
             out += str; //string all the numbers together to form required length
         }
         while (out.charAt(0) === "0" && out.length > 1)
             out = out.slice(1);
         //in some cases during the last round through the "while" statement a number starting with 3 or more 0's will be chosen which results in too short an output number
         if (out.length < len)
-            return Base64.rand(len, ent + random12Digit()); //try again
+            return b64.rand(len, ent + random12Digit()); //try again
         return out.slice(0, len);
     };
-    //salted SHA256 hash
-    //asArray (optional) set to true to return an array of 32 base 10 numbers instead of hexadecimal
-    Base64.hash = function (message, asArray) {
+    b64.hash = function (message, asArray) {
         function Uint8Arr(length) {
             if (typeof Uint8Array !== 'undefined') {
                 return new Uint8Array(length);
@@ -1915,23 +1448,23 @@ var Base64 = {};
         message = String(message.length + 1231) + String(message);
         var s = unescape(encodeURIComponent(message)); // UTF-8
         var i;
-        message = Uint8Arr(s.length);
+        var arr = Uint8Arr(s.length);
         for (i = 0; i < s.length; i++) {
-            message[i] = s.charCodeAt(i) & 0xff;
+            arr[i] = s.charCodeAt(i) & 0xff;
         }
-        var length = message.length;
+        var length = arr.length;
         var byteLength = Math.floor((length + 72) / 64) * 64;
         var wordLength = byteLength / 4;
         var bitLength = length * 8;
         var m = Uint8Arr(byteLength);
         if (typeof Uint8Array !== 'undefined' && !Array.isArray(m)) {
-            m.set(message);
+            m.set(arr);
         }
         else {
-            for (i = 0; i < message.length; i++) {
-                m[i] = message[i];
+            for (i = 0; i < arr.length; i++) {
+                m[i] = arr[i];
             }
-            for (i = message.length; i < m.length; i++) {
+            for (i = arr.length; i < m.length; i++) {
                 m[i] = 0;
             }
         }
@@ -2037,11 +1570,11 @@ var Base64 = {};
         else
             return toHex(hash);
     };
-    Base64.hmac = function (message, key) {
+    b64.hmac = function (message, key) {
         key = String(key);
         var k;
         if (key.length > 32)
-            k = Base64.hash(key, true);
+            k = b64.hash(key, true);
         else {
             var s = unescape(encodeURIComponent(key)); // UTF-8
             k = new Uint8Array(32);
@@ -2052,20 +1585,19 @@ var Base64 = {};
         for (var i = 0; i < k.length; i++) {
             k[i] ^= 0x36;
         }
-        var inner = Base64.hash(toHex(k));
+        var inner = b64.hash(toHex(k));
         for (var i = 0; i < k.length; i++) {
             k[i] ^= 0x36 ^ 0x5c;
         }
-        return Base64.hash(toHex(k) + inner + String(message));
+        return b64.hash(toHex(k) + inner + String(message));
     };
-    /*compress and convert any text to base64, with our without a key*/
-    Base64.write = function (str, key) {
+    b64.write = function (str, key) {
         if (str === null)
             return "";
         str = String(str);
         str = convertTo(str);
         if (key) {
-            var a, b = [], c = charset, d = Base64.hash(key), e, f = c + c + c + c + c;
+            var a, b = [], c = charset, d = b64.hash(key), e, f = c + c + c + c + c;
             for (a = 0, e = 0; a < str.length; a++, e = e === String(d).length - 1 ? 0 : e + 1)
                 b[a] = f[c.indexOf(str[a]) + c.indexOf(String(d)[e]) * 4];
             str = "d" + b.join("");
@@ -2079,14 +1611,13 @@ var Base64 = {};
         }
         return str;
     };
-    /*revert from base64, and decompress*/
-    Base64.read = function (str, key) {
+    b64.read = function (str, key) {
         if (str === null)
             return "";
         str = String(str);
         if (key && /^d/.test(str)) {
             str = str.replace(/^d/, "");
-            var a = str.length, b = [], c = charset, d = Base64.hash(key), e, f = c + c + c + c + c, g, h = String(d).length, i = c.length;
+            var a = str.length, b = [], c = charset, d = b64.hash(key), e, f = c + c + c + c + c, g, h = String(d).length, i = c.length;
             for (g = 0, e = 0; g < a; g++, e = e === h - 1 ? 0 : e + 1)
                 b[g] = f[c.indexOf(str[g]) + i * 4 - c.indexOf(String(d)[e]) * 4];
             str = b.join("");
@@ -2101,8 +1632,7 @@ var Base64 = {};
         }
         return revertFrom(str);
     };
-    /*same as Base64.write, but does some error checking as well*/
-    Base64.write_and_verify = function (str, key) {
+    b64.write_and_verify = function (str, key) {
         function locateTextDifferences(str1, str2) {
             var diff = [], d = 1;
             if (str2 === null)
@@ -2127,85 +1657,67 @@ var Base64 = {};
         }
         /*for debugging the write/read functions*/
         var orig = str;
-        str = Base64.write(str, key);
-        if (Base64.read(str, key) !== orig)
-            return "Write error! Aborted operation. " + locateTextDifferences(orig, Base64.read(str, key));
+        str = b64.write(str, key);
+        if (b64.read(str, key) !== orig)
+            return "Write error! Aborted operation. " + locateTextDifferences(orig, b64.read(str, key));
         else
             return str;
     };
-    /*creates a Diffie Hellman Merkle public key from any string (usually from a secret password)*/
-    Base64.createPublicKey = function (myPrivateKey) {
-        myPrivateKey = Base64.number_hash(myPrivateKey, 100);
+    b64.createPublicKey = function (myPrivateKey) {
+        myPrivateKey = b64.number_hash(myPrivateKey, 100);
         var ret = bigInt("32416178251").modPow(myPrivateKey, prime).toString();
         return ret;
     };
-    /* create a secondary secret key to share with someone if you know their public key.
-     * You must also give them the secret key's corresponding public key. Similar to a session key
-     */
-    Base64.createUserKey = function (userPublicKey, masterKey) { return Base64.write("key:" + masterKey, getSessionKey(masterKey, userPublicKey)); };
-    /*same as Base64.createUserKey, but needs the user's private key to verify*/
-    Base64.createUserKey_and_verify = function (userPrivateKey, masterKey) {
+    b64.createUserKey = function (userPublicKey, masterKey) { return b64.write("key:" + masterKey, getSessionKey(masterKey, userPublicKey)); };
+    b64.createUserKey_and_verify = function (userPrivateKey, masterKey) {
         //create public keys
-        var mainPublicKey = Base64.createPublicKey(masterKey), userPublicKey = Base64.createPublicKey(userPrivateKey);
+        var mainPublicKey = b64.createPublicKey(masterKey), userPublicKey = b64.createPublicKey(userPrivateKey);
         //verify public keys work
         var usersSessionKey = getSessionKey(userPrivateKey, mainPublicKey), mainSessionKey = getSessionKey(masterKey, userPublicKey);
         if (usersSessionKey !== mainSessionKey)
             throw new Error("Public/Private key creation error");
         //create userKey from masterKey with common session key
-        var userKey = Base64.write_and_verify("key:" + masterKey, mainSessionKey);
+        var userKey = b64.write_and_verify("key:" + masterKey, mainSessionKey);
         //verify
-        if (String(masterKey) === String(Base64.readUserKey(userPrivateKey, userKey, mainPublicKey)))
+        if (String(masterKey) === String(b64.readUserKey(userPrivateKey, userKey, mainPublicKey)))
             return userKey;
         else
             throw new Error("Error creating user key for " + userPrivateKey);
     };
-    /* read a secret key (userKey) that was shared with you, using your own secret key and the person who shared it
-     * with you's public key (the mainPublicKey is the public key that corresponds to the secret key)
-     */
-    Base64.readUserKey = function (myPrivateKey, userKey, mainPublicKey) {
-        var key = Base64.read(userKey, getSessionKey(myPrivateKey, mainPublicKey));
+    b64.readUserKey = function (myPrivateKey, userKey, mainPublicKey) {
+        var key = b64.read(userKey, getSessionKey(myPrivateKey, mainPublicKey));
         if (/^key:/.test(key))
             return key.replace(/^key:/, "");
         else
             return false;
     };
-    /* share plaintext with someone if you know their public key (as generated by base64.js)
-     * expires = Number in months till data is no longer valid (optional, can be easily bypassed if source code is known)
-     */
-    Base64.share = function (str, myPrivateKey, theirPublicKeys, expires) {
-        var key = Base64.rand(prime.length), members = [Base64.createUserKey(Base64.createPublicKey(myPrivateKey), key)]; //add self to members in case uploading to network where you might need to access it as well
+    b64.share = function (str, myPrivateKey, theirPublicKeys, expires) {
+        var key = b64.rand(prime.length), members = [b64.createUserKey(b64.createPublicKey(myPrivateKey), key)]; //add self to members in case uploading to network where you might need to access it as well
         expires = expires && !isNaN(expires) && isFinite(expires) ? new Date().getTime() + expires * 26298e5 : expires ? new Date().getTime() + 18 * 26298e5 : false;
-        str = Base64.write(str, key);
+        str = b64.write(str, key);
         if (theirPublicKeys && theirPublicKeys instanceof Array) {
             for (var a = 0; a < theirPublicKeys.length; a++) {
-                members[a + 1] = Base64.createUserKey(theirPublicKeys[a], key);
+                members[a + 1] = b64.createUserKey(theirPublicKeys[a], key);
             }
         }
         return {
-            "Version": Base64.Version,
+            "Version": b64.Version,
             "Expires": expires,
             "Compressed": true,
             "Data": str,
-            "PublicKey": Base64.createPublicKey(key),
-            "UserKeys": Base64.write_and_verify(JSON.stringify(members)),
-            "Signature": Base64.hmac(str + expires, key)
+            "PublicKey": b64.createPublicKey(key),
+            "UserKeys": b64.write_and_verify(JSON.stringify(members)),
+            "Signature": b64.hmac(str + expires, key)
         };
     };
-    /* returns data as an object {
-        "message": a debug message if process failed
-        "type": "results" if successful, "debug" if not
-        "data": the shared file content
-        "hash": the hash of the shared file contents
-    }
-    */
-    Base64.readShared = function (obj, myPrivateKey) {
+    b64.readShared = function (obj, myPrivateKey) {
         var key, type = "error", message = "", data, hash;
-        if (obj.Version === Base64.Version || obj.Version === 1.0) { //supported version numbers
+        if (obj.Version === b64.Version || obj.Version === 1.0) { //supported version numbers
             if (obj.UserKeys && obj.Compressed) {
-                var members = JSON.parse(Base64.read(obj.UserKeys));
+                var members = JSON.parse(b64.read(obj.UserKeys));
                 for (var a = 0, len = members.length; a < len; a++) {
-                    if (Base64.readUserKey(myPrivateKey, members[a], obj.PublicKey))
-                        key = Base64.readUserKey(myPrivateKey, members[a], obj.PublicKey);
+                    if (b64.readUserKey(myPrivateKey, members[a], obj.PublicKey))
+                        key = b64.readUserKey(myPrivateKey, members[a], obj.PublicKey);
                 }
                 members = null;
             }
@@ -2213,8 +1725,8 @@ var Base64 = {};
                 message = "data expired";
             else if (key) {
                 if (obj.Version === 1.0) { //version 1.0 uses hash, not hmac
-                    data = Base64.read(obj.Data, key);
-                    hash = Base64.hash(data + obj.Expires);
+                    data = b64.read(obj.Data, key);
+                    hash = b64.hash(data + obj.Expires);
                     if (obj.Signature === hash) {
                         type = "results";
                         message = "success";
@@ -2225,9 +1737,9 @@ var Base64 = {};
                     }
                 }
                 else {
-                    hash = Base64.hmac(obj.Data + obj.Expires, key);
+                    hash = b64.hmac(obj.Data + obj.Expires, key);
                     if (obj.Signature === hash) {
-                        data = Base64.read(obj.Data, key);
+                        data = b64.read(obj.Data, key);
                         type = "results";
                         message = "success";
                     }
@@ -2244,5 +1756,6 @@ var Base64 = {};
             message = "file version '" + obj.Version + "' not supported";
         return { "type": type, "message": message, "data": data, "hmac": hash };
     };
+    return b64;
 })();
 //# sourceMappingURL=base64.js.map

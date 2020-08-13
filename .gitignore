@@ -303,3 +303,10 @@ __pycache__/
 
 # OpenCover UI analysis results
 OpenCover/
+
+# typescript
+tsc
+*.cmd
+*.ps1
+tsserver
+tsconfig.json
