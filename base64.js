@@ -1551,7 +1551,7 @@ var Base64 = (function () {
     b64.hash = function (message, salt) {
         message = message ? message : "";
         if (salt)
-            message = String(message) + String(salt);
+            message = String(salt) + String(message);
         else
             message = String(message.length + 1231) + String(message);
         return toHex(sha256(message));
@@ -1571,14 +1571,14 @@ var Base64 = (function () {
         for (var i = 0; i < k.length; i++) {
             k[i] ^= 0x36;
         }
-        var inner = b64.hash(toHex(k));
+        var inner = toHex(sha256(toHex(k)));
         for (var i = 0; i < k.length; i++) {
             k[i] ^= 0x36 ^ 0x5c;
         }
-        return b64.hash(toHex(k) + inner + String(message));
+        return b64.hash(String(message), toHex(k) + inner);
     };
     b64.write = function (str, key) {
-        if (str === null)
+        if (str == null)
             return "";
         str = String(str);
         str = convertTo(str);
@@ -1598,7 +1598,7 @@ var Base64 = (function () {
         return str;
     };
     b64.read = function (str, key) {
-        if (str === null)
+        if (str == null)
             return "";
         str = String(str);
         if (key && /^d/.test(str)) {

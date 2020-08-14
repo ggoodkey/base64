@@ -67,7 +67,7 @@ interface Base64Interface {
 	 * generate a random number of the "requiredLength" (input a Number from 1-300),
 	 * based on timing, proccessor speed, and any "additionalEntropy" you want to provide (optional)
 	 */
-	rand: (requiredLength: number, additionalEntropy: any) => string;
+	rand: (requiredLength?: number, additionalEntropy?: any) => string;
 
 	/**
 	 * salted SHA256 hash
@@ -82,12 +82,12 @@ interface Base64Interface {
 	/**
 	 * compress and convert any text to base64, with our without a key
 	 */
-	write: (str: string, key?: string) => string;
+	write: (str: string, key?: string | null | false) => string;
 	
 	/**
 	 * revert from base64, and decompress
 	 */
-	read: (str: string, key?: string) => string | null;
+	read: (str: string, key?: string | null | false) => string | null;
 
 	/**
 	 * same as Base64.write, but does some error checking as well
@@ -1936,7 +1936,7 @@ var Base64: Base64Interface = (function () {
 		return out.slice(0, requiredLength);
 	};
 
-	b64.rand = function (requiredLength: number, additionalEntropy: any): string {
+	b64.rand = function (requiredLength?: number, additionalEntropy?: any): string {
 		function random12Digit() {
 			return String(Math.floor(Math.random() * (((Math.pow(10, 16)) - 1) - Math.pow(10, 15) + 1) + Math.pow(10, 15))).slice(3,15);
 		}
@@ -1960,7 +1960,7 @@ var Base64: Base64Interface = (function () {
 
 	b64.hash = function (message: string, salt?: string): string {
 		message = message ? message : "";
-		if (salt) message = String(message) + String(salt);
+		if (salt) message = String(salt) + String(message);
 		else message = String(message.length + 1231) + String(message);
 		return toHex(sha256(message));
 	};
@@ -1979,15 +1979,15 @@ var Base64: Base64Interface = (function () {
 		for (let i = 0; i < k.length; i++) {
 			k[i] ^= 0x36;
 		}
-		var inner = b64.hash(toHex(k));
+		var inner = toHex(sha256(toHex(k)));
 		for (let i = 0; i < k.length; i++) {
 			k[i] ^= 0x36 ^ 0x5c;
 		}
-		return b64.hash(toHex(k) + inner + String(message));
+		return b64.hash(String(message), toHex(k) + inner);
 	};
 
-	b64.write = function (str: string, key?: string): string {
-		if (str === null) return "";
+	b64.write = function (str: string, key?: string | null | false): string {
+		if (str == null) return "";
 		str = String(str);
 		str = convertTo(str);
 		if (key) {
@@ -1999,8 +1999,8 @@ var Base64: Base64Interface = (function () {
 		return str;
 	};
 
-	b64.read = function (str: string, key?: string): string | null {
-		if (str === null) return "";
+	b64.read = function (str: string, key?: string | null | false): string | null {
+		if (str == null) return "";
 		str = String(str);
 		if (key && /^d/.test(str)) {
 			str = str.replace(/^d/, "");
