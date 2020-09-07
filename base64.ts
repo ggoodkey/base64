@@ -5,7 +5,7 @@
 * SHA256 hash, and generate high entropy random numbers.
 * Generated public Keys are numeric and 300 digits in length (~1000 bit equivelent).
 * 
-* Last Modified: August 13, 2020
+* Last Modified: Septemaber 7, 2020
 * Copyright (C) 2020 Graeme Goodkey github.com/ggoodkey
 * All rights reserved
 * 
@@ -57,6 +57,12 @@ interface Base64ReadObj {
 
 interface Base64Interface {
 	Version: number;
+
+	/**
+	 * polyfill generic atob function 
+	 * decodes (system created, non compressed) base64 encoded text
+	 */
+	atob: (str: string) => string;
 
 	/**
 	 * converts any string to a positive integer of the requiredLength
@@ -1919,6 +1925,53 @@ var Base64: Base64Interface = (function () {
 	function getSessionKey(privateKey, publicKey) {
 		return bigInt(publicKey).modPow(b64.number_hash(privateKey, 100), prime).toString();
 	}
+
+	b64.atob = function (str) {
+		function fromUtf8(str) {
+			var position = -1,
+				len, buffer: number[] = [],
+				enc: number[] = [0,0,0,0];
+			if (!lookup) {
+				len = charset.length;
+				lookup = {};
+				while (++position < len)
+					lookup[charset.charAt(position)] = position;
+				position = -1;
+			}
+			len = str.length;
+			while (++position < len) {
+				enc[0] = lookup[str.charAt(position)];
+				enc[1] = lookup[str.charAt(++position)];
+				buffer.push((enc[0] << 2) | (enc[1] >> 4));
+				enc[2] = lookup[str.charAt(++position)];
+				if (enc[2] === 64)
+					break;
+				buffer.push(((enc[1] & 15) << 4) | (enc[2] >> 2));
+				enc[3] = lookup[str.charAt(++position)];
+				if (enc[3] === 64)
+					break;
+				buffer.push(((enc[2] & 3) << 6) | enc[3]);
+			}
+			return buffer;
+		}
+		var lookup:{[char:string]: number} | null = null;
+
+		if (str.length % 4)
+			throw new Error("InvalidCharacterError: 'Base64.atob' failed: The string to be decoded is not correctly encoded.");
+		var buffer = fromUtf8(str),
+			position = 0,
+			len = buffer.length;
+		var result = '';
+		while (position < len) {
+			if (buffer[position] < 128)
+				result += String.fromCharCode(buffer[position++]);
+			else if (buffer[position] > 191 && buffer[position] < 224)
+				result += String.fromCharCode(((buffer[position++] & 31) << 6) | (buffer[position++] & 63));
+			else
+				result += String.fromCharCode(((buffer[position++] & 15) << 12) | ((buffer[position++] & 63) << 6) | (buffer[position++] & 63));
+		}
+		return result;
+	};
 
 	b64.number_hash = function (str: string, requiredLength?: number): string {
 		requiredLength = requiredLength && !isNaN(requiredLength) && isFinite(requiredLength) && requiredLength > 0 ? requiredLength : 10;	
