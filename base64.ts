@@ -5,8 +5,8 @@
 * SHA256 hash, and generate high entropy random numbers.
 * Generated public Keys are numeric and 300 digits in length (~1000 bit equivelent).
 * 
-* Last Modified: Septemaber 7, 2020
-* Copyright (C) 2020 Graeme Goodkey github.com/ggoodkey
+* Last Modified: October 26, 2021
+* Copyright (C) 2021 Graeme Goodkey github.com/ggoodkey
 * All rights reserved
 * 
 * Released free of charge for inclusion in your own applications, as is or as modified by you.
