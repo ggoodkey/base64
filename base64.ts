@@ -5,7 +5,7 @@
 * SHA256 hash, and generate high entropy random numbers.
 * Generated public Keys are numeric and 300 digits in length (~1000 bit equivelent).
 * 
-* Last Modified: October 26, 2021
+* Last Modified: November 26, 2021
 * Copyright (C) 2021 Graeme Goodkey github.com/ggoodkey
 * All rights reserved
 * 
@@ -59,10 +59,16 @@ interface Base64Interface {
 	Version: number;
 
 	/**
-	 * polyfill generic atob function 
+	 * generic atob (A to B) function 
 	 * decodes (system created, non compressed) base64 encoded text
 	 */
 	atob: (str: string) => string;
+
+	/**
+	 * generic btoa (B to A) function 
+	 * encodes text to utf-8 then to base64 encoding (without compressing it)
+	 */
+	btoa: (str: string) => string;
 
 	/**
 	 * converts any string to a positive integer of the requiredLength
@@ -77,7 +83,7 @@ interface Base64Interface {
 
 	/**
 	 * salted SHA256 hash
-	 */ 
+	 */
 	hash: (message: string, salt?: string) => string;
 
 	/**
@@ -89,7 +95,7 @@ interface Base64Interface {
 	 * compress and convert any text to base64, with our without a key
 	 */
 	write: (str: string, key?: string | null | false) => string;
-	
+
 	/**
 	 * revert from base64, and decompress
 	 */
@@ -401,8 +407,8 @@ var Base64: Base64Interface = (function () {
 					enc4 = 64;
 				}
 				output = output +
-				charset.charAt(enc1) + charset.charAt(enc2) +
-				charset.charAt(enc3) + charset.charAt(enc4);
+					charset.charAt(enc1) + charset.charAt(enc2) +
+					charset.charAt(enc3) + charset.charAt(enc4);
 			}
 			return output;
 		}
@@ -429,11 +435,11 @@ var Base64: Base64Interface = (function () {
 			return null;
 		}
 		var output = "",
-		ol = 0,
-		output_ = 0,
-		chr1, chr2, chr3,
-		enc1, enc2, enc3, enc4,
-		i = 0, f = String.fromCharCode;
+			ol = 0,
+			output_ = 0,
+			chr1, chr2, chr3,
+			enc1, enc2, enc3, enc4,
+			i = 0, f = String.fromCharCode;
 		input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
 		while (i < input.length) {
 			enc1 = charset.indexOf(input.charAt(i++));
@@ -620,7 +626,7 @@ var Base64: Base64Interface = (function () {
 		}
 	}
 
-	
+
 	type BigNumber = number | bigint | string | BigInteger;
 
 	interface BigInteger {
@@ -797,7 +803,7 @@ var Base64: Base64Interface = (function () {
 	}
 
 	interface BaseArray {
-		
+
 		value: number[];
 
 		isNegative: boolean;
@@ -1930,7 +1936,7 @@ var Base64: Base64Interface = (function () {
 		function fromUtf8(str) {
 			var position = -1,
 				len, buffer: number[] = [],
-				enc: number[] = [0,0,0,0];
+				enc: number[] = [0, 0, 0, 0];
 			if (!lookup) {
 				len = charset.length;
 				lookup = {};
@@ -1954,7 +1960,7 @@ var Base64: Base64Interface = (function () {
 			}
 			return buffer;
 		}
-		var lookup:{[char:string]: number} | null = null;
+		var lookup: { [char: string]: number } | null = null;
 
 		if (str.length % 4)
 			throw new Error("InvalidCharacterError: 'Base64.atob' failed: The string to be decoded is not correctly encoded.");
@@ -1973,8 +1979,49 @@ var Base64: Base64Interface = (function () {
 		return result;
 	};
 
+	b64.btoa = function (s: string): string {
+		function toUtf8(s) {
+			var position = -1,
+				len = s.length,
+				chr, buffer: number[] = [];
+			if (/^[\x00-\x7f]*$/.test(s)) while (++position < len)
+				buffer.push(s.charCodeAt(position));
+			else while (++position < len) {
+				chr = s.charCodeAt(position);
+				if (chr < 128)
+					buffer.push(chr);
+				else if (chr < 2048)
+					buffer.push((chr >> 6) | 192, (chr & 63) | 128);
+				else
+					buffer.push((chr >> 12) | 224, ((chr >> 6) & 63) | 128, (chr & 63) | 128);
+			}
+			return buffer;
+		}
+		var buffer = toUtf8(s),
+			position = -1,
+			len = buffer.length,
+			nan0, nan1, nan2, enc = [0, 0, 0, 0];
+
+		var result = '';
+		while (++position < len) {
+			nan0 = buffer[position];
+			nan1 = buffer[++position];
+			enc[0] = nan0 >> 2;
+			enc[1] = ((nan0 & 3) << 4) | (nan1 >> 4);
+			if (isNaN(nan1))
+				enc[2] = enc[3] = 64;
+			else {
+				nan2 = buffer[++position];
+				enc[2] = ((nan1 & 15) << 2) | (nan2 >> 6);
+				enc[3] = (isNaN(nan2)) ? 64 : nan2 & 63;
+			}
+			result += charset[enc[0]] + charset[enc[1]] + charset[enc[2]] + charset[enc[3]];
+		}
+		return result;
+	}
+
 	b64.number_hash = function (str: string, requiredLength?: number): string {
-		requiredLength = requiredLength && !isNaN(requiredLength) && isFinite(requiredLength) && requiredLength > 0 ? requiredLength : 10;	
+		requiredLength = requiredLength && !isNaN(requiredLength) && isFinite(requiredLength) && requiredLength > 0 ? requiredLength : 10;
 		var out = "";
 		for (let a = 0, h = 0, s = "", i, chr, len; out.length < requiredLength; a++) {
 			for (i = 0, len = str.length; i < len; i++) {
@@ -1991,7 +2038,7 @@ var Base64: Base64Interface = (function () {
 
 	b64.rand = function (requiredLength?: number, additionalEntropy?: any): string {
 		function random12Digit() {
-			return String(Math.floor(Math.random() * (((Math.pow(10, 16)) - 1) - Math.pow(10, 15) + 1) + Math.pow(10, 15))).slice(3,15);
+			return String(Math.floor(Math.random() * (((Math.pow(10, 16)) - 1) - Math.pow(10, 15) + 1) + Math.pow(10, 15))).slice(3, 15);
 		}
 		var len = requiredLength && !isNaN(requiredLength) && isFinite(requiredLength) && requiredLength > 0 ? requiredLength : 8,
 			ent = additionalEntropy ? String(additionalEntropy) : random12Digit(),

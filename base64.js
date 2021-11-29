@@ -1,10 +1,11 @@
+"use strict";
 /*!
 * Base64 performs several functions:
 * Compress a string to base64, Diffie Hellman Merkle key exchange,
 * SHA256 hash, and generate high entropy random numbers.
 * Generated public Keys are numeric and 300 digits in length (~1000 bit equivelent).
 *
-* Last Modified: October 26, 2021
+* Last Modified: November 26, 2021
 * Copyright (C) 2021 Graeme Goodkey github.com/ggoodkey
 * All rights reserved
 *
@@ -1545,6 +1546,42 @@ var Base64 = (function () {
                 result += String.fromCharCode(((buffer[position++] & 31) << 6) | (buffer[position++] & 63));
             else
                 result += String.fromCharCode(((buffer[position++] & 15) << 12) | ((buffer[position++] & 63) << 6) | (buffer[position++] & 63));
+        }
+        return result;
+    };
+    b64.btoa = function (s) {
+        function toUtf8(s) {
+            var position = -1, len = s.length, chr, buffer = [];
+            if (/^[\x00-\x7f]*$/.test(s))
+                while (++position < len)
+                    buffer.push(s.charCodeAt(position));
+            else
+                while (++position < len) {
+                    chr = s.charCodeAt(position);
+                    if (chr < 128)
+                        buffer.push(chr);
+                    else if (chr < 2048)
+                        buffer.push((chr >> 6) | 192, (chr & 63) | 128);
+                    else
+                        buffer.push((chr >> 12) | 224, ((chr >> 6) & 63) | 128, (chr & 63) | 128);
+                }
+            return buffer;
+        }
+        var buffer = toUtf8(s), position = -1, len = buffer.length, nan0, nan1, nan2, enc = [0, 0, 0, 0];
+        var result = '';
+        while (++position < len) {
+            nan0 = buffer[position];
+            nan1 = buffer[++position];
+            enc[0] = nan0 >> 2;
+            enc[1] = ((nan0 & 3) << 4) | (nan1 >> 4);
+            if (isNaN(nan1))
+                enc[2] = enc[3] = 64;
+            else {
+                nan2 = buffer[++position];
+                enc[2] = ((nan1 & 15) << 2) | (nan2 >> 6);
+                enc[3] = (isNaN(nan2)) ? 64 : nan2 & 63;
+            }
+            result += charset[enc[0]] + charset[enc[1]] + charset[enc[2]] + charset[enc[3]];
         }
         return result;
     };

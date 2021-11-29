@@ -129,7 +129,8 @@ Base64 contains a few additional helper functions that are also accessable.
 
 Helper Functions|Description
 ---|---
-`Base64.atob`|Decode base64 encoded text (system created, non compressed) 'atob' polyfill
+`Base64.atob`|Generic atob (A to B) function. Decodes (system created, non compressed) base64 encoded text
+`Base64.btoa`|Generic btoa (B to A) function. Encodes text to utf-8 then to base64 encoding (without compressing it)
 `Base64.write_and_verify`|Same as Base64.write, but does some error checking as well
 `Base64.hash`|Salted SHA256 hash
 `Base64.number_hash`|Converts any string to a positive integer of the requiredLength
