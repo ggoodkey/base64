@@ -3,10 +3,10 @@
 * Base64 performs several functions: 
 * Compress a string to base64, Diffie Hellman Merkle key exchange, 
 * SHA256 hash, and generate high entropy random numbers.
-* Generated public Keys are numeric and 300 digits in length (~1000 bit equivelent).
+* Generated public Keys are numeric and 300 or 644 digits in length (~996 or 2140 bit equivelent).
 * 
-* Last Modified: November 26, 2021
-* Copyright (C) 2021 Graeme Goodkey github.com/ggoodkey
+* Last Modified: July 27, 2023
+* Copyright (C) 2023 Graeme Goodkey github.com/ggoodkey
 * All rights reserved
 * 
 * Released free of charge for inclusion in your own applications, as is or as modified by you.
@@ -26,7 +26,7 @@
 interface Base64ShareObj {
 	Version: number;
 	Expires: number | false;
-	Compressed: boolean;
+	Mode: WriteModes;
 	Data: string;
 	PublicKey: string;
 	UserKeys: string;
@@ -55,8 +55,16 @@ interface Base64ReadObj {
 	hmac: string;
 }
 
-interface Base64Interface {
-	Version: number;
+interface Base64Functions {
+	/**
+	 * optimizes for specific needs
+	 * 'normal' uses standard settings
+	 * 'urlsafe' uses only url safe characters A-z, 0-9, dash, underscore and tilda
+	 * 'performance' uses a smaller prime and skips compression
+	 * 'security' uses a larger prime and always compresses
+	 * @param str {'normal'|'urlsafe'|'performance'|'security'} the desired write operation mode
+	 */
+	setMode: (str: WriteModes) => void;
 
 	/**
 	 * generic atob (A to B) function 
@@ -94,12 +102,12 @@ interface Base64Interface {
 	/**
 	 * compress and convert any text to base64, with our without a key
 	 */
-	write: (str: string, key?: string | null | false) => string;
+	write: (str: string, key?: string) => string;
 
 	/**
 	 * revert from base64, and decompress
 	 */
-	read: (str: string, key?: string | null | false) => string | null;
+	read: (str: string, key?: string) => string | null;
 
 	/**
 	 * same as Base64.write, but does some error checking as well
@@ -140,24 +148,1255 @@ interface Base64Interface {
 	readShared: (obj: Base64ShareObj, myPrivateKey: string) => Base64ReadObj;
 }
 
+type WriteModes = 'normal' | 'urlsafe' | 'performance' | 'security';
+
+interface Base64Interface extends Base64Functions {
+	Version: number;
+
+	Mode: WriteModes;
+}
+
+
+const bigInt = (function (undefined) {
+
+	type BigNumber = number | string | BigInt;
+
+
+	interface BaseArray {
+
+		value: number[];
+
+		isNegative: boolean;
+	}
+
+	interface BigInt {
+		value: number | number[];
+
+		sign: boolean;
+
+		isSmall: boolean;
+
+		/**
+		 * Returns the absolute value of a bigInt.
+		 */
+		abs(): BigInt;
+
+		/**
+		 * Performs addition.
+		 */
+		add(number: BigNumber): BigInt;
+
+		/**
+		 * Performs a comparison between two numbers. If the numbers are equal, it returns 0.
+		 * If the first number is greater, it returns 1. If the first number is lesser, it returns -1.
+		 */
+		compare(number: BigNumber): number;
+
+		/**
+		 * Performs a comparison between the absolute value of two numbers.
+		 */
+		compareAbs(number: BigNumber): number;
+
+		/**
+		 * Alias for the compare method.
+		 */
+		compareTo(number: BigNumber): number;
+
+		/**
+		 * Performs integer division, disregarding the remainder.
+		 */
+		divide(number: BigNumber): BigInt;
+
+		/**
+		 * Performs division and returns an object with two properties: quotient and remainder.
+		 * The sign of the remainder will match the sign of the dividend.
+		 */
+		divmod(number: BigNumber): { quotient: BigInt, remainder: BigInt };
+
+		/**
+		 * Alias for the equals method.
+		 */
+		eq(number: BigNumber): boolean;
+
+		/**
+		 * Checks if two numbers are equal.
+		 */
+		equals(number: BigNumber): boolean;
+
+		/**
+		 * Returns true if the number is negative, false otherwise.
+		 * Returns false for 0 and true for -0.
+		 */
+		isNegative(): boolean;
+
+		/**
+		 * Returns true if the number is odd, false otherwise.
+		 */
+		isOdd(): boolean;
+
+		/**
+		 * Return true if the number is positive, false otherwise.
+		 * Returns true for 0 and false for -0.
+		 */
+		isPositive(): boolean;
+
+		/**
+		 * Returns true if the number is 1 or -1, false otherwise.
+		 */
+		isUnit(): boolean;
+
+		/**
+		 * Return true if the number is 0 or -0, false otherwise.
+		 */
+		isZero(): boolean;
+
+		/**
+		 * Alias for the subtract method.
+		 */
+		minus(number: BigNumber): BigInt;
+
+		/**
+		 * Performs division and returns the remainder, disregarding the quotient.
+		 * The sign of the remainder will match the sign of the dividend.
+		 */
+		mod(number: BigNumber): BigInt;
+
+		/**
+		 * Takes the number to the power exp modulo mod.
+		 */
+		modPow(exp: BigNumber, mod: BigNumber): BigInt;
+
+		/**
+		 * Performs multiplication.
+		 */
+		multiply(number: BigNumber): BigInt;
+
+		/**
+		 * Reverses the sign of the number.
+		 */
+		negate(): BigInt;
+
+		/**
+		 * Adds one to the number.
+		 */
+		next(): BigInt;
+
+		/**
+		 * Alias for the divide method.
+		 */
+		over(number: BigNumber): BigInt;
+
+		/**
+		 * Alias for the add method.
+		 */
+		plus(number: BigNumber): BigInt;
+
+		/**
+		 * Alias for the mod method.
+		 */
+		remainder(number: BigNumber): BigInt;
+
+		/**
+		 * Squares the number.
+		 */
+		square(): BigInt;
+
+		/**
+		 * Performs subtraction.
+		 */
+		subtract(number: BigNumber): BigInt;
+
+		/**
+		 * Alias for the multiply method.
+		 */
+		times(number: BigNumber): BigInt;
+
+		/**
+		 * Converts a bigInt into a native Javascript number. Loses precision for numbers outside the range.
+		 */
+		toJSNumber(): number;
+
+		/**
+		 * Converts a bigInt to a string.
+		 */
+		toString(radix?: number, alphabet?: string): string;
+
+		/**
+		 * Converts a bigInt to a native Javascript number. This override allows you to use native
+		 * arithmetic operators without explicit conversion.
+		 */
+		valueOf(): number;
+
+		_multiplyBySmall(v: any): BigInt;
+	}
+
+
+
+	var BASE = 1e7,
+		LOG_BASE = 7,
+		MAX_INT = 9007199254740992,
+		MAX_INT_ARR = smallToArray(MAX_INT),
+		DEFAULT_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+	function isPrecise(n: number) {
+		return -MAX_INT < n && n < MAX_INT;
+	}
+
+	function smallToArray(n: number) { // For performance reasons doesn't reference BASE, need to change this function if BASE changes
+		if (n < 1e7)
+			return [n];
+		if (n < 1e14)
+			return [n % 1e7, Math.floor(n / 1e7)];
+		return [n % 1e7, Math.floor(n / 1e7) % 1e7, Math.floor(n / 1e14)];
+	}
+
+	function arrayToSmall(arr: number[]): number | number[] { // If BASE changes this function may need to change
+		trim(arr);
+		var length = arr.length;
+		if (length < 4 && compareAbs(arr, MAX_INT_ARR) < 0) {
+			switch (length) {
+				case 0: return 0;
+				case 1: return arr[0];
+				case 2: return arr[0] + arr[1] * BASE;
+				default: return arr[0] + (arr[1] + arr[2] * BASE) * BASE;
+			}
+		}
+		return arr;
+	}
+
+	function trim(v: number[]) {
+		var i = v.length;
+		while (v[--i] === 0);
+		v.length = i + 1;
+	}
+
+	function createArray(length: number) { // function shamelessly stolen from Yaffle's library https://github.com/Yaffle/BigInteger
+		var x = new Array(length);
+		var i = -1;
+		while (++i < length) {
+			x[i] = 0;
+		}
+		return x;
+	}
+
+	function truncate(n: number) {
+		if (n > 0) return Math.floor(n);
+		return Math.ceil(n);
+	}
+
+	function add(a: number[], b: number[]) { // assumes a and b are arrays with a.length >= b.length
+		var l_a = a.length,
+			l_b = b.length,
+			r = new Array(l_a),
+			carry = 0,
+			base = BASE,
+			sum, i;
+		for (i = 0; i < l_b; i++) {
+			sum = a[i] + b[i] + carry;
+			carry = sum >= base ? 1 : 0;
+			r[i] = sum - carry * base;
+		}
+		while (i < l_a) {
+			sum = a[i] + carry;
+			carry = sum === base ? 1 : 0;
+			r[i++] = sum - carry * base;
+		}
+		if (carry > 0) r.push(carry);
+		return r;
+	}
+
+	function addAny(a: number[], b: number[]) {
+		if (a.length >= b.length) return add(a, b);
+		return add(b, a);
+	}
+
+	function addSmall(a: number[], carry: number): number[] { // assumes a is array, carry is number with 0 <= carry < MAX_INT
+		var l = a.length,
+			r: number[] = new Array(l),
+			base = BASE,
+			sum, i;
+		for (i = 0; i < l; i++) {
+			sum = a[i] - base + carry;
+			carry = Math.floor(sum / base);
+			r[i] = sum - carry * base;
+			carry += 1;
+		}
+		while (carry > 0) {
+			r[i++] = carry % base;
+			carry = Math.floor(carry / base);
+		}
+		return r;
+	}
+
+	function subtract(a: string | any[], b: string | any[]) { // assumes a and b are arrays with a >= b
+		var a_l = a.length,
+			b_l = b.length,
+			r = new Array(a_l),
+			borrow = 0,
+			base = BASE,
+			i, difference;
+		for (i = 0; i < b_l; i++) {
+			difference = a[i] - borrow - b[i];
+			if (difference < 0) {
+				difference += base;
+				borrow = 1;
+			} else borrow = 0;
+			r[i] = difference;
+		}
+		for (i = b_l; i < a_l; i++) {
+			difference = a[i] - borrow;
+			if (difference < 0) difference += base;
+			else {
+				r[i++] = difference;
+				break;
+			}
+			r[i] = difference;
+		}
+		for (; i < a_l; i++) {
+			r[i] = a[i];
+		}
+		trim(r);
+		return r;
+	}
+
+	function subtractAny(a: number[], b: number[], sign: boolean): BigInt {
+		var value;
+		if (compareAbs(a, b) >= 0) {
+			value = subtract(a, b);
+		} else {
+			value = subtract(b, a);
+			sign = !sign;
+		}
+		value = arrayToSmall(value);
+		if (typeof value === "number") {
+			if (sign) value = -value;
+			return new SmallInteger(value);
+		}
+		return new BigInteger(value, sign);
+	}
+
+	function subtractSmall(a: number[], b: number, sign: boolean): BigInt { // assumes a is array, b is number with 0 <= b < MAX_INT
+		var l = a.length,
+			r: number[] | number = new Array(l),
+			carry = -b,
+			base = BASE,
+			i, difference;
+		for (i = 0; i < l; i++) {
+			difference = a[i] + carry;
+			carry = Math.floor(difference / base);
+			difference %= base;
+			r[i] = difference < 0 ? difference + base : difference;
+		}
+		r = arrayToSmall(r);
+		if (typeof r === "number") {
+			if (sign) r = -r;
+			return new SmallInteger(r);
+		} return new BigInteger(r, sign);
+	}
+
+	function multiplyLong(a: number[], b: number[]) {
+		var a_l = a.length,
+			b_l = b.length,
+			l = a_l + b_l,
+			r = createArray(l),
+			base = BASE,
+			product, carry, i, a_i, b_j;
+		for (i = 0; i < a_l; ++i) {
+			a_i = a[i];
+			for (var j = 0; j < b_l; ++j) {
+				b_j = b[j];
+				product = a_i * b_j + r[i + j];
+				carry = Math.floor(product / base);
+				r[i + j] = product - carry * base;
+				r[i + j + 1] += carry;
+			}
+		}
+		trim(r);
+		return r;
+	}
+
+	function multiplySmall(a: number[], b: number): number[] { // assumes a is array, b is number with |b| < BASE
+		var l = a.length,
+			r = new Array(l),
+			base = BASE,
+			carry = 0,
+			product, i;
+		for (i = 0; i < l; i++) {
+			product = a[i] * b + carry;
+			carry = Math.floor(product / base);
+			r[i] = product - carry * base;
+		}
+		while (carry > 0) {
+			r[i++] = carry % base;
+			carry = Math.floor(carry / base);
+		}
+		return r;
+	}
+
+	function shiftLeft(x: number[], n: number): number[] {
+		var r: number[] = [];
+		while (n-- > 0) r.push(0);
+		return r.concat(x);
+	}
+
+	function multiplyKaratsuba(x: number[], y: number[]) {
+		var n = Math.max(x.length, y.length);
+
+		if (n <= 30) return multiplyLong(x, y);
+		n = Math.ceil(n / 2);
+
+		var b = x.slice(n),
+			a = x.slice(0, n),
+			d = y.slice(n),
+			c = y.slice(0, n);
+
+		var ac = multiplyKaratsuba(a, c),
+			bd = multiplyKaratsuba(b, d),
+			abcd = multiplyKaratsuba(addAny(a, b), addAny(c, d));
+
+		var product = addAny(addAny(ac, shiftLeft(subtract(subtract(abcd, ac), bd), n)), shiftLeft(bd, 2 * n));
+		trim(product);
+		return product;
+	}
+
+	// The following function is derived from a surface fit of a graph plotting the performance difference
+	// between long multiplication and karatsuba multiplication versus the lengths of the two arrays.
+	function useKaratsuba(l1: number, l2: number): boolean {
+		return -0.012 * l1 - 0.012 * l2 + 0.000015 * l1 * l2 > 0;
+	}
+
+	function square(a: number[]) {
+		//console.assert(2 * BASE * BASE < MAX_INT);
+		var l = a.length,
+			r = createArray(l + l),
+			base = BASE,
+			product, carry, i, a_i, a_j;
+		for (i = 0; i < l; i++) {
+			a_i = a[i];
+			carry = 0 - a_i * a_i;
+			for (var j = i; j < l; j++) {
+				a_j = a[j];
+				product = 2 * (a_i * a_j) + r[i + j] + carry;
+				carry = Math.floor(product / base);
+				r[i + j] = product - carry * base;
+			}
+			r[i + l] = carry;
+		}
+		trim(r);
+		return r;
+	}
+
+	function multiplySmallAndArray(a: number, b: number[], sign: boolean): BigInt { // a >= 0
+		if (a < BASE) {
+			return new BigInteger(multiplySmall(b, a), sign);
+		}
+		return new BigInteger(multiplyLong(b, smallToArray(a)), sign);
+	}
+
+	function divMod1(a: number[], b: number[]): (number | number[])[] { // Left over from previous version. Performs faster than divMod2 on smaller input sizes.
+		var a_l = a.length,
+			b_l = b.length,
+			base = BASE,
+			result = createArray(b.length),
+			divisorMostSignificantDigit = b[b_l - 1],
+			// normalization
+			lambda = Math.ceil(base / (2 * divisorMostSignificantDigit)),
+			remainder: number | number[] = multiplySmall(a, lambda),
+			divisor = multiplySmall(b, lambda),
+			quotientDigit, shift, carry, borrow, i, l, q;
+		if (remainder.length <= a_l) remainder.push(0);
+		divisor.push(0);
+		divisorMostSignificantDigit = divisor[b_l - 1];
+		for (shift = a_l - b_l; shift >= 0; shift--) {
+			quotientDigit = base - 1;
+			if (remainder[shift + b_l] !== divisorMostSignificantDigit) {
+				quotientDigit = Math.floor((remainder[shift + b_l] * base + remainder[shift + b_l - 1]) / divisorMostSignificantDigit);
+			}
+			// quotientDigit <= base - 1
+			carry = 0;
+			borrow = 0;
+			l = divisor.length;
+			for (i = 0; i < l; i++) {
+				carry += quotientDigit * divisor[i];
+				q = Math.floor(carry / base);
+				borrow += remainder[shift + i] - (carry - q * base);
+				carry = q;
+				if (borrow < 0) {
+					remainder[shift + i] = borrow + base;
+					borrow = -1;
+				} else {
+					remainder[shift + i] = borrow;
+					borrow = 0;
+				}
+			}
+			while (borrow !== 0) {
+				quotientDigit -= 1;
+				carry = 0;
+				for (i = 0; i < l; i++) {
+					carry += remainder[shift + i] - base + divisor[i];
+					if (carry < 0) {
+						remainder[shift + i] = carry + base;
+						carry = 0;
+					} else {
+						remainder[shift + i] = carry;
+						carry = 1;
+					}
+				}
+				borrow += carry;
+			}
+			result[shift] = quotientDigit;
+		}
+		// denormalization
+		remainder = divModSmall(remainder, lambda)[0];
+		return [arrayToSmall(result), arrayToSmall(remainder)];
+	}
+
+	function divMod2(a: number[], b: number[]): (number | number[])[] { // Implementation idea shamelessly stolen from Silent Matt's library http://silentmatt.com/biginteger/
+		// Performs faster than divMod1 on larger input sizes.
+		var a_l = a.length,
+			b_l = b.length,
+			result: number[] = [],
+			part: number[] = [],
+			base = BASE,
+			guess, xlen, highx, highy, check;
+		while (a_l) {
+			part.unshift(a[--a_l]);
+			trim(part);
+			if (compareAbs(part, b) < 0) {
+				result.push(0);
+				continue;
+			}
+			xlen = part.length;
+			highx = part[xlen - 1] * base + part[xlen - 2];
+			highy = b[b_l - 1] * base + b[b_l - 2];
+			if (xlen > b_l) {
+				highx = (highx + 1) * base;
+			}
+			guess = Math.ceil(highx / highy);
+			do {
+				check = multiplySmall(b, guess);
+				if (compareAbs(check, part) <= 0) break;
+				guess--;
+			} while (guess);
+			result.push(guess);
+			part = subtract(part, check);
+		}
+		result.reverse();
+		return [arrayToSmall(result), arrayToSmall(part)];
+	}
+
+	function divModSmall(value: number[], lambda: number): [number[], number] {
+		var length = value.length,
+			quotient = createArray(length),
+			base = BASE,
+			i, q, remainder, divisor;
+		remainder = 0;
+		for (i = length - 1; i >= 0; --i) {
+			divisor = remainder * base + value[i];
+			q = truncate(divisor / lambda);
+			remainder = divisor - q * lambda;
+			quotient[i] = q | 0;
+		}
+		return [quotient, remainder | 0];
+	}
+
+	function divModAny(self: BigInt, v: BigNumber): BigInt[] {
+		var value, n = parseValue(v);
+		var a = self.value, b = n.value;
+		var quotient;
+		if (b === 0) throw new Error("Cannot divide by zero");
+		if (self.isSmall) {
+			if (n.isSmall) {
+				return [new SmallInteger(truncate((a as number) / (b as number))), new SmallInteger((a as number) % (b as number))];
+			}
+			return [Int[0], self];
+		}
+		if (n.isSmall) {
+			if (b === 1) return [self, Int[0]];
+			if (b == -1) return [self.negate(), Int[0]];
+			var abs = Math.abs(b as number);
+			if (abs < BASE) {
+				value = divModSmall(a as number[], abs);
+				quotient = arrayToSmall(value[0]);
+				var remainder = value[1];
+				if (self.sign) remainder = -remainder;
+				if (typeof quotient === "number") {
+					if (self.sign !== n.sign) quotient = -quotient;
+					return [new SmallInteger(quotient), new SmallInteger(remainder)];
+				}
+				return [new BigInteger(quotient, self.sign !== n.sign), new SmallInteger(remainder)];
+			}
+			b = smallToArray(abs);
+		}
+		var comparison = compareAbs(a as number[], b as number[]);
+		if (comparison === -1) return [Int[0], self];
+		if (comparison === 0) return [Int[self.sign === n.sign ? 1 : -1], Int[0]];
+
+		// divMod1 is faster on smaller input sizes
+		if ((a as number[]).length + (b as number[]).length <= 200)
+			value = divMod1(a as number[], b as number[]);
+		else value = divMod2((a as number[]), (b as number[]));
+
+		quotient = value[0];
+		var qSign = self.sign !== n.sign,
+			mod = value[1],
+			mSign = self.sign,
+			_mod;
+		if (typeof quotient === "number") {
+			if (qSign) quotient = -quotient;
+			quotient = new SmallInteger(quotient);
+		} else quotient = new BigInteger(quotient, qSign);
+		if (typeof mod === "number") {
+			if (mSign) mod = -mod;
+			_mod = new SmallInteger(mod);
+		} else _mod = new BigInteger(mod, mSign);
+		return [quotient, _mod];
+	}
+
+	function parseBaseFromArray(digits: BigInt[], base: any, isNegative: boolean): BigInt {
+		var val: BigInt = Int[0], pow: BigInt = Int[1], i;
+		for (i = digits.length - 1; i >= 0; i--) {
+			val = val.add(digits[i].times(pow));
+			pow = pow.times(base);
+		}
+		return isNegative ? val.negate() : val;
+	}
+
+	function stringify(digit: number, alphabet?: string): string {
+		alphabet = alphabet || DEFAULT_ALPHABET;
+		if (digit < alphabet.length) {
+			return alphabet[digit];
+		}
+		return "<" + digit + ">";
+	}
+
+	function toBase(n: BigInt, base: BigNumber): BaseArray {
+		base = bigInt(base);
+		if (base.isZero()) {
+			if (n.isZero()) return { value: [0], isNegative: false };
+			throw new Error("Cannot convert nonzero numbers to base 0.");
+		}
+		if (base.equals(-1)) {
+			if (n.isZero()) return { value: [0], isNegative: false };
+			if (n.isNegative())
+				return {
+					value: ([] as number[]).concat.apply([] as number[], (Array.apply(null, Array(-n.toJSNumber()))
+						.map(Array.prototype.valueOf, [1, 0]) as number[])
+					),
+					isNegative: false
+				};
+
+			var arr = Array.apply(null, Array(n.toJSNumber() - 1))
+				.map(Array.prototype.valueOf, [0, 1]);
+			arr.unshift([1]);
+			return {
+				value: ([] as number[]).concat.apply([], arr as number[]),
+				isNegative: false
+			};
+		}
+
+		var neg = false;
+		if (n.isNegative() && base.isPositive()) {
+			neg = true;
+			n = n.abs();
+		}
+		if (base.isUnit()) {
+			if (n.isZero()) return { value: [0], isNegative: false };
+
+			return {
+				value: Array.apply(null, Array(n.toJSNumber()))
+					.map(Number.prototype.valueOf, 1),
+				isNegative: neg
+			};
+		}
+		var out: number[] = [];
+		var left = n, divmod;
+		while (left.isNegative() || left.compareAbs(base) >= 0) {
+			divmod = left.divmod(base);
+			left = divmod.quotient;
+			var digit = divmod.remainder;
+			if (digit.isNegative()) {
+				digit = base.minus(digit).abs();
+				left = left.next();
+			}
+			out.push(digit.toJSNumber());
+		}
+		out.push(left.toJSNumber());
+		return { value: out.reverse(), isNegative: neg };
+	}
+
+	function toBaseString(n: BigInt, base: BigNumber, alphabet?: string): string {
+		var arr = toBase(n, base);
+		return (arr.isNegative ? "-" : "") + arr.value.map(function (x) {
+			return stringify(x, alphabet);
+		}).join('');
+	}
+
+	function compareAbs(a: number[], b: number[]) {
+		if (a.length !== b.length) {
+			return a.length > b.length ? 1 : -1;
+		}
+		for (var i = a.length - 1; i >= 0; i--) {
+			if (a[i] !== b[i]) return a[i] > b[i] ? 1 : -1;
+		}
+		return 0;
+	}
+
+	function parseStringValue(v: string): BigInt {
+		if (isPrecise(+v)) {
+			var x = +v;
+			if (x === truncate(x))
+				return new SmallInteger(x);
+			throw new Error("Invalid integer: " + v);
+		}
+		var sign = v[0] === "-";
+		if (sign) v = v.slice(1);
+		var split = v.split(/e/i);
+		if (split.length > 2) throw new Error("Invalid integer: " + split.join("e"));
+		if (split.length === 2) {
+			var e: string = split[1];
+			if (e[0] === "+") e = e.slice(1);
+			var exp: number = +e;
+			if (exp !== truncate(exp) || !isPrecise(exp)) throw new Error("Invalid integer: " + exp + " is not a valid exponent.");
+			var text = split[0];
+			var decimalPlace = text.indexOf(".");
+			if (decimalPlace >= 0) {
+				exp -= text.length - decimalPlace - 1;
+				text = text.slice(0, decimalPlace) + text.slice(decimalPlace + 1);
+			}
+			if (exp < 0) throw new Error("Cannot include negative exponent part for integers");
+			text += (new Array(exp + 1)).join("0");
+			v = text;
+		}
+		var isValid = /^([0-9][0-9]*)$/.test(v);
+		if (!isValid) throw new Error("Invalid integer: " + v);
+		var r: number[] = [], max = v.length, l = LOG_BASE, min = max - l;
+		while (max > 0) {
+			r.push(+v.slice(min, max));
+			min -= l;
+			if (min < 0) min = 0;
+			max -= l;
+		}
+		trim(r);
+		return new BigInteger(r, sign);
+	}
+
+	function parseNumberValue(v: number): BigInt {
+		if (isPrecise(v)) {
+			if (v !== truncate(v)) throw new Error(v + " is not an integer.");
+			return new SmallInteger(v);
+		}
+		return parseStringValue(v.toString());
+	}
+
+	function parseValue(v: string | number | BigInt): BigInt {
+		if (typeof v === "number") {
+			return parseNumberValue(v);
+		}
+		if (typeof v === "string") {
+			return parseStringValue(v);
+		}
+		return v;
+	}
+
+	class BigInteger implements BigInt {
+		value: number[];
+		sign: boolean;
+		isSmall: false;
+
+		constructor(value: number[], sign: boolean) {
+			this.value = value;
+			this.sign = sign;
+			this.isSmall = false;
+		}
+
+		add(v: BigInt): BigInt {
+			var n = parseValue(v);
+			if (this.sign !== n.sign) {
+				return this.subtract(n.negate());
+			}
+			var a = this.value, b = n.value;
+			if (n.isSmall) {
+				return new BigInteger(addSmall(a, Math.abs(b as number)), this.sign);
+			}
+			return new BigInteger(addAny(a, b as number[]), this.sign);
+		}
+
+		plus = this.add;
+
+		subtract(v: BigNumber): BigInt {
+			var n = parseValue(v);
+			if (this.sign !== n.sign) {
+				return this.add(n.negate());
+			}
+			var a = this.value, b = n.value;
+			if (n.isSmall)
+				return subtractSmall(a, Math.abs(b as number), this.sign);
+			return subtractAny(a as number[], b as number[], this.sign);
+		}
+
+		minus = this.subtract;
+
+		negate(): BigInt {
+			return new BigInteger(this.value, !this.sign);
+		}
+
+		abs(): BigInt {
+			return new BigInteger(this.value, false);
+		}
+
+		multiply(v: BigNumber): BigInt {
+			var n = parseValue(v),
+				a = this.value, b = n.value,
+				sign = this.sign !== n.sign,
+				abs;
+			if (n.isSmall) {
+				if (b === 0) return Int[0];
+				if (b === 1) return this;
+				if (b === -1) return this.negate();
+				abs = Math.abs(b as number);
+				if (abs < BASE) {
+					return new BigInteger(multiplySmall(a, abs), sign);
+				}
+				b = smallToArray(abs);
+			}
+			if (useKaratsuba(a.length, (b as number[]).length)) // Karatsuba is only faster for certain array sizes
+				return new BigInteger(multiplyKaratsuba(a, b as number[]), sign);
+			return new BigInteger(multiplyLong(a, b as number[]), sign);
+		}
+
+		times = this.multiply;
+
+		_multiplyBySmall(a: SmallInteger): BigInt {
+			if (a.value === 0) return Int[0];
+			if (a.value === 1) return this;
+			if (a.value === -1) return this.negate();
+			return multiplySmallAndArray(Math.abs(a.value), this.value, this.sign !== a.sign);
+		}
+
+		square(): BigInt {
+			return new BigInteger(square(this.value), false);
+		}
+
+		divmod(v: BigNumber): { quotient: BigInt, remainder: BigInt } {
+			var result = divModAny(this, v);
+			return {
+				quotient: result[0],
+				remainder: result[1]
+			};
+		}
+
+		divide(v: BigNumber): BigInt {
+			return divModAny(this, v)[0];
+		}
+
+		over = this.divide;
+
+		mod(v: BigNumber): BigInt {
+			return divModAny(this, v)[1];
+		}
+
+		remainder = this.mod;
+
+		modPow(exp: BigNumber, mod: BigNumber): BigInt {
+			exp = parseValue(exp);
+			mod = parseValue(mod);
+			if (mod.isZero()) throw new Error("Cannot take modPow with modulus 0");
+			var r = Int[1],
+				base = this.mod(mod);
+			while (exp.isPositive()) {
+				if (base.isZero()) return Int[0];
+				if (exp.isOdd()) r = r.multiply(base).mod(mod);
+				exp = exp.divide(2);
+				base = base.square().mod(mod);
+			}
+			return r;
+		}
+
+		compareAbs(v: BigNumber): number {
+			var n = parseValue(v),
+				a = this.value,
+				b = n.value;
+			if (n.isSmall) return 1;
+			return compareAbs(a, b as number[]);
+		}
+
+		compare(v: BigNumber): number {
+			// See discussion about comparison with Infinity:
+			// https://github.com/peterolson/BigInteger.js/issues/61
+			if (v === Infinity) {
+				return -1;
+			}
+			if (v === -Infinity) {
+				return 1;
+			}
+
+			var n = parseValue(v),
+				a = this.value,
+				b = n.value;
+			if (this.sign !== n.sign) {
+				return n.sign ? 1 : -1;
+			}
+			if (n.isSmall) {
+				return this.sign ? -1 : 1;
+			}
+			return compareAbs(a, b as number[]) * (this.sign ? -1 : 1);
+		}
+
+		compareTo = this.compare;
+
+		equals(v: BigNumber): boolean {
+			return this.compare(v) === 0;
+		}
+
+		eq = this.equals;
+
+		isOdd(): boolean {
+			return (this.value[0] & 1) === 1;
+		}
+
+		isPositive(): boolean {
+			return !this.sign;
+		}
+
+		isNegative(): boolean {
+			return this.sign;
+		}
+
+		isUnit(): boolean {
+			return false;
+		}
+
+		isZero(): boolean {
+			return false;
+		}
+
+		next(): BigInt {
+			var value = this.value;
+			if (this.sign) {
+				return subtractSmall(value, 1, this.sign);
+			}
+			return new BigInteger(addSmall(value, 1), this.sign);
+		}
+
+		toString(radix?: number, alphabet?: string): string {
+			if (radix === undefined) radix = 10;
+			if (radix !== 10) return toBaseString(this, radix, alphabet);
+			var v = this.value, l = v.length, str = String(v[--l]), zeros = "0000000", digit;
+			while (--l >= 0) {
+				digit = String(v[l]);
+				str += zeros.slice(digit.length) + digit;
+			}
+			var sign = this.sign ? "-" : "";
+			return sign + str;
+		}
+
+		valueOf(): number {
+			return parseInt(this.toString(), 10);
+		}
+
+		toJSNumber = this.valueOf;
+	}
+
+	class SmallInteger implements BigInt {
+		isSmall: true;
+		sign: boolean;
+		value: number;
+		constructor(value: number) {
+			this.value = value;
+			this.sign = value < 0;
+			this.isSmall = true;
+		}
+
+		add(v: BigNumber): BigInt {
+			var n = parseValue(v);
+			var a = this.value;
+			if (a < 0 !== n.sign) {
+				return this.subtract(n.negate());
+			}
+			var b: number | number[] = n.value;
+			if (n.isSmall) {
+				if (isPrecise((a as number) + (b as number))) return new SmallInteger((a as number) + (b as number));
+				b = smallToArray(Math.abs(b as number));
+			}
+			return new BigInteger(addSmall(b as number[], Math.abs(a)), a < 0);
+		}
+
+		plus = this.add;
+
+		subtract(v: BigNumber): BigInt {
+			var n = parseValue(v);
+			var a = this.value;
+			if (a < 0 !== n.sign) {
+				return this.add(n.negate());
+			}
+			var b = n.value;
+			if (n.isSmall) {
+				return new SmallInteger(a - (b as number));
+			}
+			return subtractSmall(b as number[], Math.abs(a), a >= 0);
+		}
+
+		minus = this.subtract;
+
+
+		compareAbs(v: BigNumber): number {
+			var n = parseValue(v),
+				a = Math.abs(this.value),
+				b = n.value;
+			if (n.isSmall) {
+				b = Math.abs(b as number);
+				return a === b ? 0 : a > b ? 1 : -1;
+			}
+			return -1;
+		}
+
+		compare(v: BigNumber): number {
+			if (v === Infinity) {
+				return -1;
+			}
+			if (v === -Infinity) {
+				return 1;
+			}
+
+			var n = parseValue(v),
+				a = this.value,
+				b = n.value;
+			if (n.isSmall) {
+				return a == b ? 0 : a > (b as number) ? 1 : -1;
+			}
+			if (a < 0 !== n.sign) {
+				return a < 0 ? -1 : 1;
+			}
+			return a < 0 ? 1 : -1;
+		}
+
+		compareTo = this.compare;
+
+		negate(): SmallInteger {
+			var sign = this.sign;
+			var small = new SmallInteger(-this.value);
+			small.sign = !sign;
+			return small;
+		};
+
+		abs(): SmallInteger {
+			return new SmallInteger(Math.abs(this.value));
+		}
+
+		_multiplyBySmall(a: SmallInteger): BigInt {
+			if (isPrecise(a.value * this.value)) {
+				return new SmallInteger(a.value * this.value);
+			}
+			return multiplySmallAndArray(Math.abs(a.value), smallToArray(Math.abs(this.value)), this.sign !== a.sign);
+		}
+
+		multiply(v: BigNumber): BigInt {
+			return parseValue(v)._multiplyBySmall(this);
+		}
+
+		times = this.multiply;
+
+		square(): BigInt {
+			var value = this.value * this.value;
+			if (isPrecise(value)) return new SmallInteger(value);
+			return new BigInteger(square(smallToArray(Math.abs(this.value))), false);
+		}
+
+		isOdd(): boolean {
+			return (this.value & 1) === 1;
+		}
+
+		isPositive(): boolean {
+			return this.value > 0;
+		}
+
+		isNegative(): boolean {
+			return this.value < 0;
+		}
+
+		isUnit(): boolean {
+			return Math.abs(this.value) === 1;
+		}
+
+		isZero(): boolean {
+			return this.value === 0;
+		}
+
+		next(): BigInt {
+			var value = this.value;
+			if (value + 1 < MAX_INT) return new SmallInteger(value + 1);
+			return new BigInteger(MAX_INT_ARR, false);
+		}
+
+		toString(radix?: BigNumber, alphabet?: string): string {
+			if (radix === undefined) radix = 10;
+			if (radix != 10) return toBaseString(this, radix, alphabet);
+			return String(this.value);
+		}
+
+		valueOf(): number {
+			return this.value;
+		}
+
+		toJSNumber = this.valueOf;
+
+		modPow(exp: BigNumber, mod: BigNumber): BigInt {
+			exp = parseValue(exp);
+			mod = parseValue(mod);
+			if (mod.isZero()) throw new Error("Cannot take modPow with modulus 0");
+			var r = Int[1],
+				base = this.mod(mod);
+			while (exp.isPositive()) {
+				if (base.isZero()) return Int[0];
+				if (exp.isOdd()) r = r.multiply(base).mod(mod);
+				exp = exp.divide(2);
+				base = base.square().mod(mod);
+			}
+			return r;
+		}
+
+		equals(v: BigNumber): boolean {
+			return this.compare(v) === 0;
+		}
+
+		eq = this.equals;
+
+		divmod(v: BigNumber): { quotient: BigInt, remainder: BigInt } {
+			var result = divModAny(this, v);
+			return {
+				quotient: result[0],
+				remainder: result[1]
+			};
+		}
+
+		divide(v: BigNumber): BigInt {
+			return divModAny(this, v)[0];
+		};
+
+		over = this.divide;
+
+		mod(v: BigNumber): BigInt {
+			return divModAny(this, v)[1];
+		}
+
+		remainder = this.mod;
+
+	}
+
+	function Integer(v: any, radix?: number, alphabet?: string, caseSensitive?: boolean): BigInt {
+		var parseBase = function (text: string, base: number, alphabet?: string, caseSensitive?: boolean) {
+			alphabet = alphabet || DEFAULT_ALPHABET;
+			text = String(text);
+			if (!caseSensitive) {
+				text = text.toLowerCase();
+				alphabet = alphabet.toLowerCase();
+			}
+			var length = text.length;
+			var i;
+			var absBase = Math.abs(base);
+			var alphabetValues: { [letter: string]: number } = {};
+			for (i = 0; i < alphabet.length; i++) {
+				alphabetValues[alphabet[i]] = i;
+			}
+			for (i = 0; i < length; i++) {
+				var c: string = text[i];
+				if (c === "-") continue;
+				if (c in alphabetValues) {
+					if (alphabetValues[c] >= absBase) {
+						if (c === "1" && absBase === 1) continue;
+						throw new Error(c + " is not a valid digit in base " + base + ".");
+					}
+				}
+			}
+			var digits: (BigInt)[] = [];
+			var isNegative = text[0] === "-";
+			for (i = isNegative ? 1 : 0; i < text.length; i++) {
+				var c = text[i];
+				if (c in alphabetValues) digits.push(parseValue(alphabetValues[c]));
+				else if (c === "<") {
+					var start = i;
+					do { i++; } while (text[i] !== ">" && i < text.length);
+					digits.push(parseValue(text.slice(start + 1, i)));
+				}
+				else throw new Error(c + " is not a valid character");
+			}
+			return parseBaseFromArray(digits, parseValue(base), isNegative);
+		};
+		if (typeof v === "undefined") return Int[0];
+		if (typeof radix !== "undefined") return +radix === 10 && !alphabet ? parseValue(v) : parseBase(v, radix, alphabet, caseSensitive);
+		return parseValue(v);
+	}
+
+	// BigInteger.prototype = Object.create(Integer.prototype);
+
+	// SmallInteger.prototype = Object.create(Integer.prototype);
+
+	var Int: BigInt[] = [];
+
+	// Pre-define numbers in range [-999,999]
+	for (var i = 0; i < 1000; i++) {
+		Int[i] = parseValue(i);
+		if (i > 0) Int[-i] = parseValue(-i);
+	}
+	return Integer;
+})();
+
 var Base64: Base64Interface = (function () {
 	var b64: any = {};
 	/* eslint-disable */
-	b64.Version = 1.2;
+	b64.Version = 1.3;
 
-	/*base 64 charectors*/
+	b64.Mode = 'normal';
+
+	/*base 64 characters*/
 	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+
+		validation = /[^A-Za-z0-9\+\/\=]/g,
+
+		urlSafeCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_~",
+
+		urlSafeValidation = /[^A-Za-z0-9\-_~]/g,
 
 		hexAlf = '00,01,02,03,04,05,06,07,08,09,0a,0b,0c,0d,0e,0f,10,11,12,13,14,15,16,17,18,19,1a,1b,1c,1d,1e,1f,20,21,22,23,24,25,26,27,28,29,2a,2b,2c,2d,2e,2f,30,31,32,33,34,35,36,37,38,39,3a,3b,3c,3d,3e,3f,40,41,42,43,44,45,46,47,48,49,4a,4b,4c,4d,4e,4f,50,51,52,53,54,55,56,57,58,59,5a,5b,5c,5d,5e,5f,60,61,62,63,64,65,66,67,68,69,6a,6b,6c,6d,6e,6f,70,71,72,73,74,75,76,77,78,79,7a,7b,7c,7d,7e,7f,80,81,82,83,84,85,86,87,88,89,8a,8b,8c,8d,8e,8f,90,91,92,93,94,95,96,97,98,99,9a,9b,9c,9d,9e,9f,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,aa,ab,ac,ad,ae,af,b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,ba,bb,bc,bd,be,bf,c0,c1,c2,c3,c4,c5,c6,c7,c8,c9,ca,cb,cc,cd,ce,cf,d0,d1,d2,d3,d4,d5,d6,d7,d8,d9,da,db,dc,dd,de,df,e0,e1,e2,e3,e4,e5,e6,e7,e8,e9,ea,eb,ec,ed,ee,ef,f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,fa,fb,fc,fd,fe,ff'.split(','),
 
-		//100 digit fast
-		//prime = "6513516734600035718300327211250928237178281758494417357560086828416863929270451437126021949850746381";
-
 		//300 digit
-		prime = "319705304701141539155720137200974664666792526059405792539680974929469783512821793995613718943171723765238853752439032835985158829038528214925658918372196742089464683960239919950882355844766055365179937610326127675178857306260955550407044463370239890187189750909036833976197804646589380690779463976173";
+		normal = "319705304701141539155720137200974664666792526059405792539680974929469783512821793995613718943171723765238853752439032835985158829038528214925658918372196742089464683960239919950882355844766055365179937610326127675178857306260955550407044463370239890187189750909036833976197804646589380690779463976173",
 
 		//644 digit slow
-		//prime = "1475979915214180235084898622737381736312066145333169775147771216478570297878078949377407337049389289382748507531496480477281264838760259191814463365330269540496961201113430156902396093989090226259326935025281409614983499388222831448598601834318536230923772641390209490231836446899608210795482963763094236630945410832793769905399982457186322944729636418890623372171723742105636440368218459649632948538696905872650486914434637457507280441823676813517852099348660847172579408422316678097670224011990280170474894487426924742108823536808485072502240519452587542875349976558572670229633962575212637477897785501552646522609988869914013540483809865681250419497686697771007";
+		security = "1475979915214180235084898622737381736312066145333169775147771216478570297878078949377407337049389289382748507531496480477281264838760259191814463365330269540496961201113430156902396093989090226259326935025281409614983499388222831448598601834318536230923772641390209490231836446899608210795482963763094236630945410832793769905399982457186322944729636418890623372171723742105636440368218459649632948538696905872650486914434637457507280441823676813517852099348660847172579408422316678097670224011990280170474894487426924742108823536808485072502240519452587542875349976558572670229633962575212637477897785501552646522609988869914013540483809865681250419497686697771007",
+
+		NORMAL = 'b',
+
+		URLSAFE = 'u',
+
+		PERFORMANCE = 'p',
+
+		SECURITY = 's',
+
+		LZSTRING_CODE = 'l',
+
+		NONCOMPRESSED_CODE = 'n',
+
+		KEYED = 'e';
+
+	const MODES: {
+		[id: string]: {
+			CODE: 'b' | 'u' | 'p' | 's';
+			NAME: WriteModes;
+			CHARSET: string;
+			PRIME: string;
+			COMPRESS?: boolean;
+			VALIDATION: RegExp;
+		}
+	} = {
+		b: { CODE: NORMAL, NAME: 'normal', CHARSET: charset, PRIME: normal, VALIDATION: validation },
+		u: { CODE: URLSAFE, NAME: 'urlsafe', CHARSET: urlSafeCharset, PRIME: normal, VALIDATION: urlSafeValidation },
+		p: { CODE: PERFORMANCE, NAME: 'performance', CHARSET: charset, PRIME: normal, COMPRESS: false, VALIDATION: validation },
+		s: { CODE: SECURITY, NAME: 'security', CHARSET: charset, PRIME: security, COMPRESS: true, VALIDATION: validation }
+	};
+
+	var MODE = NORMAL;
 
 	function toHex(arr: Uint8Array | number[]) {
 		var hex = '';
@@ -169,7 +1408,42 @@ var Base64: Base64Interface = (function () {
 
 	/*compress and convert text to Base64*/
 	function convertTo(input: string) {
+		function toBase64(input: string) {
+			var i = 0;
+			while (i < input.length * 2) {
+				if (i % 2 == 0) {
+					chr1 = input.charCodeAt(i / 2) >> 8;
+					chr2 = input.charCodeAt(i / 2) & 255;
+					if (i / 2 + 1 < input.length)
+						chr3 = input.charCodeAt(i / 2 + 1) >> 8;
+					else
+						chr3 = NaN;
+				} else {
+					chr1 = input.charCodeAt((i - 1) / 2) & 255;
+					if ((i + 1) / 2 < input.length) {
+						chr2 = input.charCodeAt((i + 1) / 2) >> 8;
+						chr3 = input.charCodeAt((i + 1) / 2) & 255;
+					} else
+						chr2 = chr3 = NaN;
+				}
+				i += 3;
+				enc1 = chr1 >> 2;
+				enc2 = (chr1 & 3) << 4 | chr2 >> 4;
+				enc3 = (chr2 & 15) << 2 | chr3 >> 6;
+				enc4 = chr3 & 63;
+				if (isNaN(chr2)) {
+					enc3 = enc4 = 64;
+				} else if (isNaN(chr3)) {
+					enc4 = 64;
+				}
+				output = output +
+					c.charAt(enc1) + c.charAt(enc2) +
+					c.charAt(enc3) + c.charAt(enc4);
+			}
+			return output;
+		}
 		if (input === null) return "";
+		if (MODES[MODE].COMPRESS === false) return MODES[MODE].CODE + toBase64(NONCOMPRESSED_CODE + input);
 		var output = "",
 			orig = input;
 		var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
@@ -378,49 +1652,17 @@ var Base64: Base64Interface = (function () {
 			}
 			else context_data_position++;
 		}
-		function toBase64(input: string) {
-			var i = 0;
-			while (i < input.length * 2) {
-				if (i % 2 == 0) {
-					chr1 = input.charCodeAt(i / 2) >> 8;
-					chr2 = input.charCodeAt(i / 2) & 255;
-					if (i / 2 + 1 < input.length)
-						chr3 = input.charCodeAt(i / 2 + 1) >> 8;
-					else
-						chr3 = NaN;
-				} else {
-					chr1 = input.charCodeAt((i - 1) / 2) & 255;
-					if ((i + 1) / 2 < input.length) {
-						chr2 = input.charCodeAt((i + 1) / 2) >> 8;
-						chr3 = input.charCodeAt((i + 1) / 2) & 255;
-					} else
-						chr2 = chr3 = NaN;
-				}
-				i += 3;
-				enc1 = chr1 >> 2;
-				enc2 = (chr1 & 3) << 4 | chr2 >> 4;
-				enc3 = (chr2 & 15) << 2 | chr3 >> 6;
-				enc4 = chr3 & 63;
-				if (isNaN(chr2)) {
-					enc3 = enc4 = 64;
-				} else if (isNaN(chr3)) {
-					enc4 = 64;
-				}
-				output = output +
-					charset.charAt(enc1) + charset.charAt(enc2) +
-					charset.charAt(enc3) + charset.charAt(enc4);
-			}
-			return output;
-		}
 		//constants represent the state of the data, whether or not 
 		//it has been compressed so that the process can be reversed
-		var compressed = toBase64("l" + context_data_string);
-		orig = toBase64("n" + orig);
+		var c = MODES[MODE].CHARSET;
+		var compressed = toBase64(LZSTRING_CODE + context_data_string);
+		if (MODES[MODE].COMPRESS === true) return MODES[MODE].CODE + compressed;
+		orig = toBase64(NONCOMPRESSED_CODE + orig);
 		//only use compressed version if it is indeed smaller,
 		//as lzstring compression actually lengthens short, or already
 		//highly compressed strings
 		if (compressed.length > orig.length) compressed = orig;
-		return "b" + compressed;
+		return MODES[MODE].CODE + compressed;
 	}
 
 	/*revert from compressed Base64 text to regular text*/
@@ -429,18 +1671,17 @@ var Base64: Base64Interface = (function () {
 			console.log("Decompression error1: Input is null");
 			return "";
 		}
-		if (/^b/.test(input)) input = input.replace(/^b/, "");
-		else {
-			//console.log("Decompression error2: Input is not base64 compressed >>> " + input);
-			return null;
-		}
+		var m = input.charAt(0);
+		if (!MODES[m]) return null;
+		var charset = MODES[m].CHARSET;
+		input = input.slice(1);
 		var output = "",
 			ol = 0,
 			output_ = 0,
 			chr1, chr2, chr3,
 			enc1, enc2, enc3, enc4,
 			i = 0, f = String.fromCharCode;
-		input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+		input = input.replace(MODES[m].VALIDATION, "");
 		while (i < input.length) {
 			enc1 = charset.indexOf(input.charAt(i++));
 			enc2 = charset.indexOf(input.charAt(i++));
@@ -626,1165 +1867,7 @@ var Base64: Base64Interface = (function () {
 		}
 	}
 
-
-	type BigNumber = number | bigint | string | BigInteger;
-
-	interface BigInteger {
-		/**
-		 * Returns the absolute value of a bigInt.
-		 */
-		abs(): BigInteger;
-
-		/**
-		 * Performs addition.
-		 */
-		add(number: BigNumber): BigInteger;
-
-		/**
-		 * Performs a comparison between two numbers. If the numbers are equal, it returns 0.
-		 * If the first number is greater, it returns 1. If the first number is lesser, it returns -1.
-		 */
-		compare(number: BigNumber): number;
-
-		/**
-		 * Performs a comparison between the absolute value of two numbers.
-		 */
-		compareAbs(number: BigNumber): number;
-
-		/**
-		 * Alias for the compare method.
-		 */
-		compareTo(number: BigNumber): number;
-
-		/**
-		 * Performs integer division, disregarding the remainder.
-		 */
-		divide(number: BigNumber): BigInteger;
-
-		/**
-		 * Performs division and returns an object with two properties: quotient and remainder.
-		 * The sign of the remainder will match the sign of the dividend.
-		 */
-		divmod(number: BigNumber): { quotient: BigInteger, remainder: BigInteger };
-
-		/**
-		 * Alias for the equals method.
-		 */
-		eq(number: BigNumber): boolean;
-
-		/**
-		 * Checks if two numbers are equal.
-		 */
-		equals(number: BigNumber): boolean;
-
-		/**
-		 * Returns true if the number is negative, false otherwise.
-		 * Returns false for 0 and true for -0.
-		 */
-		isNegative(): boolean;
-
-		/**
-		 * Returns true if the number is odd, false otherwise.
-		 */
-		isOdd(): boolean;
-
-		/**
-		 * Return true if the number is positive, false otherwise.
-		 * Returns true for 0 and false for -0.
-		 */
-		isPositive(): boolean;
-
-		/**
-		 * Returns true if the number is 1 or -1, false otherwise.
-		 */
-		isUnit(): boolean;
-
-		/**
-		 * Return true if the number is 0 or -0, false otherwise.
-		 */
-		isZero(): boolean;
-
-		/**
-		 * Alias for the subtract method.
-		 */
-		minus(number: BigNumber): BigInteger;
-
-		/**
-		 * Performs division and returns the remainder, disregarding the quotient.
-		 * The sign of the remainder will match the sign of the dividend.
-		 */
-		mod(number: BigNumber): BigInteger;
-
-		/**
-		 * Takes the number to the power exp modulo mod.
-		 */
-		modPow(exp: BigNumber, mod: BigNumber): BigInteger;
-
-		/**
-		 * Performs multiplication.
-		 */
-		multiply(number: BigNumber): BigInteger;
-
-		/**
-		 * Reverses the sign of the number.
-		 */
-		negate(): BigInteger;
-
-		/**
-		 * Alias for the notEquals method.
-		 */
-		neq(number: BigNumber): boolean;
-
-		/**
-		 * Adds one to the number.
-		 */
-		next(): BigInteger;
-
-		/**
-		 * Alias for the divide method.
-		 */
-		over(number: BigNumber): BigInteger;
-
-		/**
-		 * Alias for the add method.
-		 */
-		plus(number: BigNumber): BigInteger;
-
-		/**
-		 * Alias for the mod method.
-		 */
-		remainder(number: BigNumber): BigInteger;
-
-		/**
-		 * Shifts the number right by n places in its binary representation.
-		 * If a negative number is provided, it will shift left.
-		 *
-		 * Throws an error if number is outside of the range [-9007199254740992, 9007199254740992].
-		 */
-		shiftRight(number: BigNumber): BigInteger;
-
-		/**
-		 * Squares the number.
-		 */
-		square(): BigInteger;
-
-		/**
-		 * Performs subtraction.
-		 */
-		subtract(number: BigNumber): BigInteger;
-
-		/**
-		 * Alias for the multiply method.
-		 */
-		times(number: BigNumber): BigInteger;
-
-		/**
-		 * Converts a bigInt into a native Javascript number. Loses precision for numbers outside the range.
-		 */
-		toJSNumber(): number;
-
-		/**
-		 * Converts a bigInt to a string.
-		 */
-		toString(radix?: number, alphabet?: string): string;
-
-		/**
-		 * Converts a bigInt to a string. This method is called behind the scenes in JSON.stringify.
-		 */
-		toJSON(): string;
-
-		/**
-		 * Converts a bigInt to a native Javascript number. This override allows you to use native
-		 * arithmetic operators without explicit conversion.
-		 */
-		valueOf(): number;
-
-		_multiplyBySmall(v): BigInteger;
-	}
-
-	interface BaseArray {
-
-		value: number[];
-
-		isNegative: boolean;
-	}
-
-	interface BigInt extends BigInteger {
-		value: number[];
-
-		sign: boolean;
-
-		isSmall: false;
-	}
-
-	interface SmallInt extends BigInteger {
-		value: number;
-
-		sign: boolean;
-
-		isSmall: true;
-	}
-
-	var bigInt = (function (undefined) {
-		var BASE = 1e7,
-			LOG_BASE = 7,
-			MAX_INT = 9007199254740992,
-			MAX_INT_ARR = smallToArray(MAX_INT),
-			DEFAULT_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
-
-		function Integer(v, radix?, alphabet?, caseSensitive?): BigInteger {
-			if (typeof v === "undefined") return Integer[0];
-			if (typeof radix !== "undefined") return +radix === 10 && !alphabet ? parseValue(v) : parseBase(v, radix, alphabet, caseSensitive);
-			return parseValue(v);
-		}
-
-		function BigInteger(this, value, sign) {
-			this.value = value;
-			this.sign = sign;
-			this.isSmall = false;
-		}
-
-		BigInteger.prototype = Object.create(Integer.prototype);
-
-		function SmallInteger(this, value) {
-			this.value = value;
-			this.sign = value < 0;
-			this.isSmall = true;
-		}
-
-		SmallInteger.prototype = Object.create(Integer.prototype);
-
-		function isPrecise(n) {
-			return -MAX_INT < n && n < MAX_INT;
-		}
-
-		function smallToArray(n) { // For performance reasons doesn't reference BASE, need to change this function if BASE changes
-			if (n < 1e7)
-				return [n];
-			if (n < 1e14)
-				return [n % 1e7, Math.floor(n / 1e7)];
-			return [n % 1e7, Math.floor(n / 1e7) % 1e7, Math.floor(n / 1e14)];
-		}
-
-		function arrayToSmall(arr: number[]): number | number[] { // If BASE changes this function may need to change
-			trim(arr);
-			var length = arr.length;
-			if (length < 4 && compareAbs(arr, MAX_INT_ARR) < 0) {
-				switch (length) {
-					case 0: return 0;
-					case 1: return arr[0];
-					case 2: return arr[0] + arr[1] * BASE;
-					default: return arr[0] + (arr[1] + arr[2] * BASE) * BASE;
-				}
-			}
-			return arr;
-		}
-
-		function trim(v) {
-			var i = v.length;
-			while (v[--i] === 0);
-			v.length = i + 1;
-		}
-
-		function createArray(length) { // function shamelessly stolen from Yaffle's library https://github.com/Yaffle/BigInteger
-			var x = new Array(length);
-			var i = -1;
-			while (++i < length) {
-				x[i] = 0;
-			}
-			return x;
-		}
-
-		function truncate(n) {
-			if (n > 0) return Math.floor(n);
-			return Math.ceil(n);
-		}
-
-		function add(a, b) { // assumes a and b are arrays with a.length >= b.length
-			var l_a = a.length,
-				l_b = b.length,
-				r = new Array(l_a),
-				carry = 0,
-				base = BASE,
-				sum, i;
-			for (i = 0; i < l_b; i++) {
-				sum = a[i] + b[i] + carry;
-				carry = sum >= base ? 1 : 0;
-				r[i] = sum - carry * base;
-			}
-			while (i < l_a) {
-				sum = a[i] + carry;
-				carry = sum === base ? 1 : 0;
-				r[i++] = sum - carry * base;
-			}
-			if (carry > 0) r.push(carry);
-			return r;
-		}
-
-		function addAny(a, b) {
-			if (a.length >= b.length) return add(a, b);
-			return add(b, a);
-		}
-
-		function addSmall(a, carry) { // assumes a is array, carry is number with 0 <= carry < MAX_INT
-			var l = a.length,
-				r = new Array(l),
-				base = BASE,
-				sum, i;
-			for (i = 0; i < l; i++) {
-				sum = a[i] - base + carry;
-				carry = Math.floor(sum / base);
-				r[i] = sum - carry * base;
-				carry += 1;
-			}
-			while (carry > 0) {
-				r[i++] = carry % base;
-				carry = Math.floor(carry / base);
-			}
-			return r;
-		}
-
-		BigInteger.prototype.add = function (v) {
-			var n = parseValue(v);
-			if (this.sign !== n.sign) {
-				return this.subtract(n.negate());
-			}
-			var a = this.value, b = n.value;
-			if (n.isSmall) {
-				return new BigInteger(addSmall(a, Math.abs(b as number)), this.sign);
-			}
-			return new BigInteger(addAny(a, b), this.sign);
-		};
-
-		BigInteger.prototype.plus = BigInteger.prototype.add;
-
-		SmallInteger.prototype.add = function (v) {
-			var n = parseValue(v);
-			var a = this.value;
-			if (a < 0 !== n.sign) {
-				return this.subtract(n.negate());
-			}
-			var b = n.value;
-			if (n.isSmall) {
-				if (isPrecise(a + b)) return new SmallInteger(a + b);
-				b = smallToArray(Math.abs(b as number));
-			}
-			return new BigInteger(addSmall(b, Math.abs(a)), a < 0);
-		};
-
-		SmallInteger.prototype.plus = SmallInteger.prototype.add;
-
-		function subtract(a, b) { // assumes a and b are arrays with a >= b
-			var a_l = a.length,
-				b_l = b.length,
-				r = new Array(a_l),
-				borrow = 0,
-				base = BASE,
-				i, difference;
-			for (i = 0; i < b_l; i++) {
-				difference = a[i] - borrow - b[i];
-				if (difference < 0) {
-					difference += base;
-					borrow = 1;
-				} else borrow = 0;
-				r[i] = difference;
-			}
-			for (i = b_l; i < a_l; i++) {
-				difference = a[i] - borrow;
-				if (difference < 0) difference += base;
-				else {
-					r[i++] = difference;
-					break;
-				}
-				r[i] = difference;
-			}
-			for (; i < a_l; i++) {
-				r[i] = a[i];
-			}
-			trim(r);
-			return r;
-		}
-
-		function subtractAny(a, b, sign) {
-			var value;
-			if (compareAbs(a, b) >= 0) {
-				value = subtract(a, b);
-			} else {
-				value = subtract(b, a);
-				sign = !sign;
-			}
-			value = arrayToSmall(value);
-			if (typeof value === "number") {
-				if (sign) value = -value;
-				return new SmallInteger(value);
-			}
-			return new BigInteger(value, sign);
-		}
-
-		function subtractSmall(a, b, sign) { // assumes a is array, b is number with 0 <= b < MAX_INT
-			var l = a.length,
-				r: number[] | number = new Array(l),
-				carry = -b,
-				base = BASE,
-				i, difference;
-			for (i = 0; i < l; i++) {
-				difference = a[i] + carry;
-				carry = Math.floor(difference / base);
-				difference %= base;
-				r[i] = difference < 0 ? difference + base : difference;
-			}
-			r = arrayToSmall(r);
-			if (typeof r === "number") {
-				if (sign) r = -r;
-				return new SmallInteger(r);
-			} return new BigInteger(r, sign);
-		}
-
-		BigInteger.prototype.subtract = function (v) {
-			var n = parseValue(v);
-			if (this.sign !== n.sign) {
-				return this.add(n.negate());
-			}
-			var a = this.value, b = n.value;
-			if (n.isSmall)
-				return subtractSmall(a, Math.abs(b as number), this.sign);
-			return subtractAny(a, b, this.sign);
-		};
-
-		BigInteger.prototype.minus = BigInteger.prototype.subtract;
-
-		SmallInteger.prototype.subtract = function (v) {
-			var n = parseValue(v);
-			var a = this.value;
-			if (a < 0 !== n.sign) {
-				return this.add(n.negate());
-			}
-			var b = n.value;
-			if (n.isSmall) {
-				return new SmallInteger(a - (b as number));
-			}
-			return subtractSmall(b, Math.abs(a), a >= 0);
-		};
-
-		SmallInteger.prototype.minus = SmallInteger.prototype.subtract;
-
-		BigInteger.prototype.negate = function () {
-			return new BigInteger(this.value, !this.sign);
-		};
-
-		SmallInteger.prototype.negate = function () {
-			var sign = this.sign;
-			var small = new SmallInteger(-this.value);
-			small.sign = !sign;
-			return small;
-		};
-
-		BigInteger.prototype.abs = function () {
-			return new BigInteger(this.value, false);
-		};
-
-		SmallInteger.prototype.abs = function () {
-			return new SmallInteger(Math.abs(this.value));
-		};
-
-		function multiplyLong(a, b) {
-			var a_l = a.length,
-				b_l = b.length,
-				l = a_l + b_l,
-				r = createArray(l),
-				base = BASE,
-				product, carry, i, a_i, b_j;
-			for (i = 0; i < a_l; ++i) {
-				a_i = a[i];
-				for (var j = 0; j < b_l; ++j) {
-					b_j = b[j];
-					product = a_i * b_j + r[i + j];
-					carry = Math.floor(product / base);
-					r[i + j] = product - carry * base;
-					r[i + j + 1] += carry;
-				}
-			}
-			trim(r);
-			return r;
-		}
-
-		function multiplySmall(a, b) { // assumes a is array, b is number with |b| < BASE
-			var l = a.length,
-				r = new Array(l),
-				base = BASE,
-				carry = 0,
-				product, i;
-			for (i = 0; i < l; i++) {
-				product = a[i] * b + carry;
-				carry = Math.floor(product / base);
-				r[i] = product - carry * base;
-			}
-			while (carry > 0) {
-				r[i++] = carry % base;
-				carry = Math.floor(carry / base);
-			}
-			return r;
-		}
-
-		function shiftLeft(x, n) {
-			var r: number[] = [];
-			while (n-- > 0) r.push(0);
-			return r.concat(x);
-		}
-
-		function multiplyKaratsuba(x, y) {
-			var n = Math.max(x.length, y.length);
-
-			if (n <= 30) return multiplyLong(x, y);
-			n = Math.ceil(n / 2);
-
-			var b = x.slice(n),
-				a = x.slice(0, n),
-				d = y.slice(n),
-				c = y.slice(0, n);
-
-			var ac = multiplyKaratsuba(a, c),
-				bd = multiplyKaratsuba(b, d),
-				abcd = multiplyKaratsuba(addAny(a, b), addAny(c, d));
-
-			var product = addAny(addAny(ac, shiftLeft(subtract(subtract(abcd, ac), bd), n)), shiftLeft(bd, 2 * n));
-			trim(product);
-			return product;
-		}
-
-		// The following function is derived from a surface fit of a graph plotting the performance difference
-		// between long multiplication and karatsuba multiplication versus the lengths of the two arrays.
-		function useKaratsuba(l1, l2) {
-			return -0.012 * l1 - 0.012 * l2 + 0.000015 * l1 * l2 > 0;
-		}
-
-		BigInteger.prototype.multiply = function (v) {
-			var n = parseValue(v),
-				a = this.value, b = n.value,
-				sign = this.sign !== n.sign,
-				abs;
-			if (n.isSmall) {
-				if (b === 0) return Integer[0];
-				if (b === 1) return this;
-				if (b === -1) return this.negate();
-				abs = Math.abs(b as number);
-				if (abs < BASE) {
-					return new BigInteger(multiplySmall(a, abs), sign);
-				}
-				b = smallToArray(abs);
-			}
-			if (useKaratsuba(a.length, (b as number[]).length)) // Karatsuba is only faster for certain array sizes
-				return new BigInteger(multiplyKaratsuba(a, b), sign);
-			return new BigInteger(multiplyLong(a, b), sign);
-		};
-
-		BigInteger.prototype.times = BigInteger.prototype.multiply;
-
-		function multiplySmallAndArray(a, b, sign) { // a >= 0
-			if (a < BASE) {
-				return new BigInteger(multiplySmall(b, a), sign);
-			}
-			return new BigInteger(multiplyLong(b, smallToArray(a)), sign);
-		}
-
-		SmallInteger.prototype._multiplyBySmall = function (a) {
-			if (isPrecise(a.value * this.value)) {
-				return new SmallInteger(a.value * this.value);
-			}
-			return multiplySmallAndArray(Math.abs(a.value), smallToArray(Math.abs(this.value)), this.sign !== a.sign);
-		};
-
-		BigInteger.prototype._multiplyBySmall = function (a) {
-			if (a.value === 0) return Integer[0];
-			if (a.value === 1) return this;
-			if (a.value === -1) return this.negate();
-			return multiplySmallAndArray(Math.abs(a.value), this.value, this.sign !== a.sign);
-		};
-
-		SmallInteger.prototype.multiply = function (v) {
-			return parseValue(v)._multiplyBySmall(this);
-		};
-
-		SmallInteger.prototype.times = SmallInteger.prototype.multiply;
-
-		function square(a) {
-			//console.assert(2 * BASE * BASE < MAX_INT);
-			var l = a.length,
-				r = createArray(l + l),
-				base = BASE,
-				product, carry, i, a_i, a_j;
-			for (i = 0; i < l; i++) {
-				a_i = a[i];
-				carry = 0 - a_i * a_i;
-				for (var j = i; j < l; j++) {
-					a_j = a[j];
-					product = 2 * (a_i * a_j) + r[i + j] + carry;
-					carry = Math.floor(product / base);
-					r[i + j] = product - carry * base;
-				}
-				r[i + l] = carry;
-			}
-			trim(r);
-			return r;
-		}
-
-		BigInteger.prototype.square = function () {
-			return new BigInteger(square(this.value), false);
-		};
-
-		SmallInteger.prototype.square = function () {
-			var value = this.value * this.value;
-			if (isPrecise(value)) return new SmallInteger(value);
-			return new BigInteger(square(smallToArray(Math.abs(this.value))), false);
-		};
-
-		function divMod1(a, b) { // Left over from previous version. Performs faster than divMod2 on smaller input sizes.
-			var a_l = a.length,
-				b_l = b.length,
-				base = BASE,
-				result = createArray(b.length),
-				divisorMostSignificantDigit = b[b_l - 1],
-				// normalization
-				lambda = Math.ceil(base / (2 * divisorMostSignificantDigit)),
-				remainder: number | number[] = multiplySmall(a, lambda),
-				divisor = multiplySmall(b, lambda),
-				quotientDigit, shift, carry, borrow, i, l, q;
-			if (remainder.length <= a_l) remainder.push(0);
-			divisor.push(0);
-			divisorMostSignificantDigit = divisor[b_l - 1];
-			for (shift = a_l - b_l; shift >= 0; shift--) {
-				quotientDigit = base - 1;
-				if (remainder[shift + b_l] !== divisorMostSignificantDigit) {
-					quotientDigit = Math.floor((remainder[shift + b_l] * base + remainder[shift + b_l - 1]) / divisorMostSignificantDigit);
-				}
-				// quotientDigit <= base - 1
-				carry = 0;
-				borrow = 0;
-				l = divisor.length;
-				for (i = 0; i < l; i++) {
-					carry += quotientDigit * divisor[i];
-					q = Math.floor(carry / base);
-					borrow += remainder[shift + i] - (carry - q * base);
-					carry = q;
-					if (borrow < 0) {
-						remainder[shift + i] = borrow + base;
-						borrow = -1;
-					} else {
-						remainder[shift + i] = borrow;
-						borrow = 0;
-					}
-				}
-				while (borrow !== 0) {
-					quotientDigit -= 1;
-					carry = 0;
-					for (i = 0; i < l; i++) {
-						carry += remainder[shift + i] - base + divisor[i];
-						if (carry < 0) {
-							remainder[shift + i] = carry + base;
-							carry = 0;
-						} else {
-							remainder[shift + i] = carry;
-							carry = 1;
-						}
-					}
-					borrow += carry;
-				}
-				result[shift] = quotientDigit;
-			}
-			// denormalization
-			remainder = divModSmall(remainder, lambda)[0];
-			return [arrayToSmall(result), arrayToSmall(remainder)];
-		}
-
-		function divMod2(a: number[], b: number[]) { // Implementation idea shamelessly stolen from Silent Matt's library http://silentmatt.com/biginteger/
-			// Performs faster than divMod1 on larger input sizes.
-			var a_l = a.length,
-				b_l = b.length,
-				result: number[] = [],
-				part: number[] = [],
-				base = BASE,
-				guess, xlen, highx, highy, check;
-			while (a_l) {
-				part.unshift(a[--a_l]);
-				trim(part);
-				if (compareAbs(part, b) < 0) {
-					result.push(0);
-					continue;
-				}
-				xlen = part.length;
-				highx = part[xlen - 1] * base + part[xlen - 2];
-				highy = b[b_l - 1] * base + b[b_l - 2];
-				if (xlen > b_l) {
-					highx = (highx + 1) * base;
-				}
-				guess = Math.ceil(highx / highy);
-				do {
-					check = multiplySmall(b, guess);
-					if (compareAbs(check, part) <= 0) break;
-					guess--;
-				} while (guess);
-				result.push(guess);
-				part = subtract(part, check);
-			}
-			result.reverse();
-			return [arrayToSmall(result), arrayToSmall(part)];
-		}
-
-		function divModSmall(value, lambda): [number[], number] {
-			var length = value.length,
-				quotient = createArray(length),
-				base = BASE,
-				i, q, remainder, divisor;
-			remainder = 0;
-			for (i = length - 1; i >= 0; --i) {
-				divisor = remainder * base + value[i];
-				q = truncate(divisor / lambda);
-				remainder = divisor - q * lambda;
-				quotient[i] = q | 0;
-			}
-			return [quotient, remainder | 0];
-		}
-
-		function divModAny(self: BigInt | SmallInt, v: BigInt | SmallInt) {
-			var value, n = parseValue(v);
-			var a = self.value, b = n.value;
-			var quotient;
-			if (b === 0) throw new Error("Cannot divide by zero");
-			if (self.isSmall) {
-				if (n.isSmall) {
-					return [new SmallInteger(truncate((a as number) / (b as number))), new SmallInteger((a as number) % (b as number))];
-				}
-				return [Integer[0], self];
-			}
-			if (n.isSmall) {
-				if (b === 1) return [self, Integer[0]];
-				if (b == -1) return [self.negate(), Integer[0]];
-				var abs = Math.abs(b as number);
-				if (abs < BASE) {
-					value = divModSmall(a, abs);
-					quotient = arrayToSmall(value[0]);
-					var remainder = value[1];
-					if (self.sign) remainder = -remainder;
-					if (typeof quotient === "number") {
-						if (self.sign !== n.sign) quotient = -quotient;
-						return [new SmallInteger(quotient), new SmallInteger(remainder)];
-					}
-					return [new BigInteger(quotient, self.sign !== n.sign), new SmallInteger(remainder)];
-				}
-				b = smallToArray(abs);
-			}
-			var comparison = compareAbs(a, b);
-			if (comparison === -1) return [Integer[0], self];
-			if (comparison === 0) return [Integer[self.sign === n.sign ? 1 : -1], Integer[0]];
-
-			// divMod1 is faster on smaller input sizes
-			if ((a as number[]).length + (b as number[]).length <= 200)
-				value = divMod1(a, b);
-			else value = divMod2((a as number[]), (b as number[]));
-
-			quotient = value[0];
-			var qSign = self.sign !== n.sign,
-				mod = value[1],
-				mSign = self.sign;
-			if (typeof quotient === "number") {
-				if (qSign) quotient = -quotient;
-				quotient = new SmallInteger(quotient);
-			} else quotient = new BigInteger(quotient, qSign);
-			if (typeof mod === "number") {
-				if (mSign) mod = -mod;
-				mod = new SmallInteger(mod);
-			} else mod = new BigInteger(mod, mSign);
-			return [quotient, mod];
-		}
-
-		BigInteger.prototype.divmod = function (v) {
-			var result = divModAny(this, v);
-			return {
-				quotient: result[0],
-				remainder: result[1]
-			};
-		};
-
-		SmallInteger.prototype.divmod = BigInteger.prototype.divmod;
-
-		BigInteger.prototype.divide = function (v) {
-			return divModAny(this, v)[0];
-		};
-
-		SmallInteger.prototype.over = SmallInteger.prototype.divide = BigInteger.prototype.over = BigInteger.prototype.divide;
-
-		BigInteger.prototype.mod = function (v) {
-			return divModAny(this, v)[1];
-		};
-
-		SmallInteger.prototype.remainder = SmallInteger.prototype.mod = BigInteger.prototype.remainder = BigInteger.prototype.mod;
-
-		BigInteger.prototype.modPow = function (exp, mod) {
-			exp = parseValue(exp);
-			mod = parseValue(mod);
-			if (mod.isZero()) throw new Error("Cannot take modPow with modulus 0");
-			var r = Integer[1],
-				base = this.mod(mod);
-			while (exp.isPositive()) {
-				if (base.isZero()) return Integer[0];
-				if (exp.isOdd()) r = r.multiply(base).mod(mod);
-				exp = exp.divide(2);
-				base = base.square().mod(mod);
-			}
-			return r;
-		};
-
-		SmallInteger.prototype.modPow = BigInteger.prototype.modPow;
-
-		function compareAbs(a, b) {
-			if (a.length !== b.length) {
-				return a.length > b.length ? 1 : -1;
-			}
-			for (var i = a.length - 1; i >= 0; i--) {
-				if (a[i] !== b[i]) return a[i] > b[i] ? 1 : -1;
-			}
-			return 0;
-		}
-
-		BigInteger.prototype.compareAbs = function (v) {
-			var n = parseValue(v),
-				a = this.value,
-				b = n.value;
-			if (n.isSmall) return 1;
-			return compareAbs(a, b);
-		};
-
-		SmallInteger.prototype.compareAbs = function (v) {
-			var n = parseValue(v),
-				a = Math.abs(this.value),
-				b = n.value;
-			if (n.isSmall) {
-				b = Math.abs(b as number);
-				return a === b ? 0 : a > b ? 1 : -1;
-			}
-			return -1;
-		};
-
-		BigInteger.prototype.compare = function (v) {
-			// See discussion about comparison with Infinity:
-			// https://github.com/peterolson/BigInteger.js/issues/61
-			if (v === Infinity) {
-				return -1;
-			}
-			if (v === -Infinity) {
-				return 1;
-			}
-
-			var n = parseValue(v),
-				a = this.value,
-				b = n.value;
-			if (this.sign !== n.sign) {
-				return n.sign ? 1 : -1;
-			}
-			if (n.isSmall) {
-				return this.sign ? -1 : 1;
-			}
-			return compareAbs(a, b) * (this.sign ? -1 : 1);
-		};
-
-		BigInteger.prototype.compareTo = BigInteger.prototype.compare;
-
-		SmallInteger.prototype.compare = function (v) {
-			if (v === Infinity) {
-				return -1;
-			}
-			if (v === -Infinity) {
-				return 1;
-			}
-
-			var n = parseValue(v),
-				a = this.value,
-				b = n.value;
-			if (n.isSmall) {
-				return a == b ? 0 : a > b ? 1 : -1;
-			}
-			if (a < 0 !== n.sign) {
-				return a < 0 ? -1 : 1;
-			}
-			return a < 0 ? 1 : -1;
-		};
-
-		SmallInteger.prototype.compareTo = SmallInteger.prototype.compare;
-
-		BigInteger.prototype.equals = function (v) {
-			return this.compare(v) === 0;
-		};
-
-		SmallInteger.prototype.eq = SmallInteger.prototype.equals = BigInteger.prototype.eq = BigInteger.prototype.equals;
-
-		BigInteger.prototype.isOdd = function () {
-			return (this.value[0] & 1) === 1;
-		};
-
-		SmallInteger.prototype.isOdd = function () {
-			return (this.value & 1) === 1;
-		};
-
-		BigInteger.prototype.isPositive = function () {
-			return !this.sign;
-		};
-
-		SmallInteger.prototype.isPositive = function () {
-			return this.value > 0;
-		};
-
-		BigInteger.prototype.isNegative = function () {
-			return this.sign;
-		};
-
-		SmallInteger.prototype.isNegative = function () {
-			return this.value < 0;
-		};
-
-		BigInteger.prototype.isUnit = function () {
-			return false;
-		};
-
-		SmallInteger.prototype.isUnit = function () {
-			return Math.abs(this.value) === 1;
-		};
-
-		BigInteger.prototype.isZero = function () {
-			return false;
-		};
-
-		SmallInteger.prototype.isZero = function () {
-			return this.value === 0;
-		};
-
-		BigInteger.prototype.next = function () {
-			var value = this.value;
-			if (this.sign) {
-				return subtractSmall(value, 1, this.sign);
-			}
-			return new BigInteger(addSmall(value, 1), this.sign);
-		};
-
-		SmallInteger.prototype.next = function () {
-			var value = this.value;
-			if (value + 1 < MAX_INT) return new SmallInteger(value + 1);
-			return new BigInteger(MAX_INT_ARR, false);
-		};
-
-		var parseBase = function (text, base, alphabet, caseSensitive) {
-			alphabet = alphabet || DEFAULT_ALPHABET;
-			text = String(text);
-			if (!caseSensitive) {
-				text = text.toLowerCase();
-				alphabet = alphabet.toLowerCase();
-			}
-			var length = text.length;
-			var i;
-			var absBase = Math.abs(base);
-			var alphabetValues = {};
-			for (i = 0; i < alphabet.length; i++) {
-				alphabetValues[alphabet[i]] = i;
-			}
-			for (i = 0; i < length; i++) {
-				var c = text[i];
-				if (c === "-") continue;
-				if (c in alphabetValues) {
-					if (alphabetValues[c] >= absBase) {
-						if (c === "1" && absBase === 1) continue;
-						throw new Error(c + " is not a valid digit in base " + base + ".");
-					}
-				}
-			}
-			base = parseValue(base);
-			var digits: BigInteger[] = [];
-			var isNegative = text[0] === "-";
-			for (i = isNegative ? 1 : 0; i < text.length; i++) {
-				var c = text[i];
-				if (c in alphabetValues) digits.push(parseValue(alphabetValues[c]));
-				else if (c === "<") {
-					var start = i;
-					do { i++; } while (text[i] !== ">" && i < text.length);
-					digits.push(parseValue(text.slice(start + 1, i)));
-				}
-				else throw new Error(c + " is not a valid character");
-			}
-			return parseBaseFromArray(digits, base, isNegative);
-		};
-
-		function parseBaseFromArray(digits, base, isNegative) {
-			var val = Integer[0], pow = Integer[1], i;
-			for (i = digits.length - 1; i >= 0; i--) {
-				val = val.add(digits[i].times(pow));
-				pow = pow.times(base);
-			}
-			return isNegative ? val.negate() : val;
-		}
-
-		function stringify(digit, alphabet: string): string {
-			alphabet = alphabet || DEFAULT_ALPHABET;
-			if (digit < alphabet.length) {
-				return alphabet[digit];
-			}
-			return "<" + digit + ">";
-		}
-
-		function toBase(n, base): BaseArray {
-			base = bigInt(base);
-			if (base.isZero()) {
-				if (n.isZero()) return { value: [0], isNegative: false };
-				throw new Error("Cannot convert nonzero numbers to base 0.");
-			}
-			if (base.equals(-1)) {
-				if (n.isZero()) return { value: [0], isNegative: false };
-				if (n.isNegative())
-					return {
-						value: ([] as number[]).concat.apply([] as number[], (Array.apply(null, Array(-n.toJSNumber()))
-							.map(Array.prototype.valueOf, [1, 0]) as number[])
-						),
-						isNegative: false
-					};
-
-				var arr = Array.apply(null, Array(n.toJSNumber() - 1))
-					.map(Array.prototype.valueOf, [0, 1]);
-				arr.unshift([1]);
-				return {
-					value: ([] as number[]).concat.apply([], arr as number[]),
-					isNegative: false
-				};
-			}
-
-			var neg = false;
-			if (n.isNegative() && base.isPositive()) {
-				neg = true;
-				n = n.abs();
-			}
-			if (base.isUnit()) {
-				if (n.isZero()) return { value: [0], isNegative: false };
-
-				return {
-					value: Array.apply(null, Array(n.toJSNumber()))
-						.map(Number.prototype.valueOf, 1),
-					isNegative: neg
-				};
-			}
-			var out: number[] = [];
-			var left = n, divmod;
-			while (left.isNegative() || left.compareAbs(base) >= 0) {
-				divmod = left.divmod(base);
-				left = divmod.quotient;
-				var digit = divmod.remainder;
-				if (digit.isNegative()) {
-					digit = base.minus(digit).abs();
-					left = left.next();
-				}
-				out.push(digit.toJSNumber());
-			}
-			out.push(left.toJSNumber());
-			return { value: out.reverse(), isNegative: neg };
-		}
-
-		function toBaseString(n, base, alphabet) {
-			var arr = toBase(n, base);
-			return (arr.isNegative ? "-" : "") + arr.value.map(function (x) {
-				return stringify(x, alphabet);
-			}).join('');
-		}
-
-		BigInteger.prototype.toString = function (radix, alphabet) {
-			if (radix === undefined) radix = 10;
-			if (radix !== 10) return toBaseString(this, radix, alphabet);
-			var v = this.value, l = v.length, str = String(v[--l]), zeros = "0000000", digit;
-			while (--l >= 0) {
-				digit = String(v[l]);
-				str += zeros.slice(digit.length) + digit;
-			}
-			var sign = this.sign ? "-" : "";
-			return sign + str;
-		};
-
-		SmallInteger.prototype.toString = function (radix, alphabet) {
-			if (radix === undefined) radix = 10;
-			if (radix != 10) return toBaseString(this, radix, alphabet);
-			return String(this.value);
-		};
-
-		BigInteger.prototype.valueOf = function () {
-			return parseInt(this.toString(), 10);
-		};
-
-		BigInteger.prototype.toJSNumber = BigInteger.prototype.valueOf;
-
-		SmallInteger.prototype.valueOf = function () {
-			return this.value;
-		};
-
-		SmallInteger.prototype.toJSNumber = SmallInteger.prototype.valueOf;
-
-		function parseStringValue(v): BigInt | SmallInt {
-			if (isPrecise(+v)) {
-				var x = +v;
-				if (x === truncate(x))
-					return new SmallInteger(x);
-				throw new Error("Invalid integer: " + v);
-			}
-			var sign = v[0] === "-";
-			if (sign) v = v.slice(1);
-			var split = v.split(/e/i);
-			if (split.length > 2) throw new Error("Invalid integer: " + split.join("e"));
-			if (split.length === 2) {
-				var exp = split[1];
-				if (exp[0] === "+") exp = exp.slice(1);
-				exp = +exp;
-				if (exp !== truncate(exp) || !isPrecise(exp)) throw new Error("Invalid integer: " + exp + " is not a valid exponent.");
-				var text = split[0];
-				var decimalPlace = text.indexOf(".");
-				if (decimalPlace >= 0) {
-					exp -= text.length - decimalPlace - 1;
-					text = text.slice(0, decimalPlace) + text.slice(decimalPlace + 1);
-				}
-				if (exp < 0) throw new Error("Cannot include negative exponent part for integers");
-				text += (new Array(exp + 1)).join("0");
-				v = text;
-			}
-			var isValid = /^([0-9][0-9]*)$/.test(v);
-			if (!isValid) throw new Error("Invalid integer: " + v);
-			var r: number[] = [], max = v.length, l = LOG_BASE, min = max - l;
-			while (max > 0) {
-				r.push(+v.slice(min, max));
-				min -= l;
-				if (min < 0) min = 0;
-				max -= l;
-			}
-			trim(r);
-			return new BigInteger(r, sign);
-		}
-
-		function parseNumberValue(v): BigInt | SmallInt {
-			if (isPrecise(v)) {
-				if (v !== truncate(v)) throw new Error(v + " is not an integer.");
-				return new SmallInteger(v);
-			}
-			return parseStringValue(v.toString());
-		}
-
-		function parseValue(v): BigInt | SmallInt {
-			if (typeof v === "number") {
-				return parseNumberValue(v);
-			}
-			if (typeof v === "string") {
-				return parseStringValue(v);
-			}
-			return v;
-		}
-		// Pre-define numbers in range [-999,999]
-		for (var i = 0; i < 1000; i++) {
-			Integer[i] = parseValue(i);
-			if (i > 0) Integer[-i] = parseValue(-i);
-		}
-		return Integer;
-	})();
-
-	function sha256(str): Uint8Array {
+	function sha256(str: string): Uint8Array {
 		var h0 = 0x6a09e667;
 		var h1 = 0xbb67ae85;
 		var h2 = 0x3c6ef372;
@@ -1928,12 +2011,34 @@ var Base64: Base64Interface = (function () {
 	}
 
 	/*creates a Diffie Hellman Merkle session key from your own secret private key and someone elses public key*/
-	function getSessionKey(privateKey, publicKey) {
-		return bigInt(publicKey).modPow(b64.number_hash(privateKey, 100), prime).toString();
+	function getSessionKey(privateKey: string, publicKey: string) {
+		return bigInt(publicKey).modPow(b64.number_hash(privateKey, 100), MODES[MODE].PRIME).toString();
 	}
 
-	b64.atob = function (str) {
-		function fromUtf8(str) {
+	b64.setMode = function (str: WriteModes): void {
+		switch (str) {
+			case MODES[SECURITY].NAME:
+				MODE = SECURITY;
+				b64.Mode = str;
+				break;
+			case MODES[PERFORMANCE].NAME:
+				MODE = PERFORMANCE;
+				b64.Mode = str;
+				break;
+			case MODES[URLSAFE].NAME:
+				MODE = URLSAFE;
+				b64.Mode = str;
+				break;
+			case MODES[NORMAL].NAME:
+			default:
+				MODE = NORMAL;
+				b64.Mode = MODES[NORMAL].NAME;
+				break;
+		}
+	}
+
+	b64.atob = function (str: string) {
+		function fromUtf8(str: string) {
 			var position = -1,
 				len, buffer: number[] = [],
 				enc: number[] = [0, 0, 0, 0];
@@ -1980,7 +2085,7 @@ var Base64: Base64Interface = (function () {
 	};
 
 	b64.btoa = function (s: string): string {
-		function toUtf8(s) {
+		function toUtf8(s: string) {
 			var position = -1,
 				len = s.length,
 				chr, buffer: number[] = [];
@@ -2091,9 +2196,9 @@ var Base64: Base64Interface = (function () {
 		str = String(str);
 		str = convertTo(str);
 		if (key) {
-			var a, b: string[] = [], c = charset, d = b64.hash(key), e, f = c + c + c + c + c;
+			var a, b: string[] = [], c = MODES[MODE].CHARSET, d = b64.hash(key), e, f = c + c + c + c + c;
 			for (a = 0, e = 0; a < str.length; a++, e = e === String(d).length - 1 ? 0 : e + 1) b[a] = f[c.indexOf(str[a]) + c.indexOf(String(d)[e]) * 4];
-			str = "d" + b.join("");
+			str = KEYED + MODES[MODE].CODE + b.join("");
 			a = null!; b = null!; c = null!; d = null!; e = null!; f = null!; key = null!;
 		}
 		return str;
@@ -2102,9 +2207,10 @@ var Base64: Base64Interface = (function () {
 	b64.read = function (str: string, key?: string | null | false): string | null {
 		if (str == null) return "";
 		str = String(str);
-		if (key && /^d/.test(str)) {
-			str = str.replace(/^d/, "");
-			var a = str.length, b: string[] = [], c = charset, d = b64.hash(key), e, f = c + c + c + c + c, g, h = String(d).length, i = c.length;
+		if (key && /^(d|e)/.test(str)) {
+			var c = /^eu/.test(str) ? urlSafeCharset : charset;
+			str = str.replace(/^(d|eb|eu|ep|es)/, "");
+			var a = str.length, b: string[] = [], d = b64.hash(key), e, f = c + c + c + c + c, g, h = String(d).length, i = c.length;
 			for (g = 0, e = 0; g < a; g++, e = e === h - 1 ? 0 : e + 1) b[g] = f[c.indexOf(str[g]) + i * 4 - c.indexOf(String(d)[e]) * 4];
 			str = b.join("");
 			key = null!; a = null!; b = null!; c = null!; d = null!; e = null!; f = null!; g = null!;
@@ -2113,7 +2219,7 @@ var Base64: Base64Interface = (function () {
 	};
 
 	b64.write_and_verify = function (str: string, key?: string): string {
-		function locateTextDifferences(str1, str2) {
+		function locateTextDifferences(str1: string, str2: string) {
 			var diff: string[] = [], d = 1;
 			if (str2 === null) return "Decompressing the string returned null. Possibly invalid key used??";
 			var len1 = str1.length, len2 = str2.length;
@@ -2139,7 +2245,7 @@ var Base64: Base64Interface = (function () {
 
 	b64.createPublicKey = function (myPrivateKey: string): string {
 		myPrivateKey = b64.number_hash(myPrivateKey, 100);
-		var ret = bigInt("32416178251").modPow(myPrivateKey, prime).toString();
+		var ret = bigInt("32416178251").modPow(myPrivateKey, MODES[MODE].PRIME).toString();
 		return ret;
 	};
 
@@ -2167,7 +2273,7 @@ var Base64: Base64Interface = (function () {
 	};
 
 	b64.share = function (str: string, myPrivateKey: string, theirPublicKeys: string[], expires?: number | false): Base64ShareObj {
-		var key = b64.rand(prime.length),
+		var key = b64.rand(MODES[MODE].PRIME.length),
 			members = [b64.createUserKey(b64.createPublicKey(myPrivateKey), key)]; //add self to members in case uploading to network where you might need to access it as well
 		expires = expires && !isNaN(expires) && isFinite(expires) ? new Date().getTime() + expires * 26298e5 : expires ? new Date().getTime() + 18 * 26298e5 : false;
 		str = b64.write(str, key);
@@ -2179,7 +2285,7 @@ var Base64: Base64Interface = (function () {
 		return {
 			"Version": b64.Version,
 			"Expires": expires,
-			"Compressed": true,
+			"Mode": MODES[MODE].NAME,
 			"Data": str,
 			"PublicKey": b64.createPublicKey(key),
 			"UserKeys": b64.write_and_verify(JSON.stringify(members)),
@@ -2193,8 +2299,8 @@ var Base64: Base64Interface = (function () {
 			message = "",
 			data,
 			hash;
-		if (obj.Version === b64.Version || obj.Version === 1.0) {//supported version numbers
-			if (obj.UserKeys && obj.Compressed) {
+		if (obj.Version === b64.Version || obj.Version === 1.0 || obj.Version === 1.2) {//supported version numbers
+			if (obj.UserKeys) {
 				var members = JSON.parse(b64.read(obj.UserKeys));
 				for (var a = 0, len = members.length; a < len; a++) {
 					if (b64.readUserKey(myPrivateKey, members[a], obj.PublicKey))
