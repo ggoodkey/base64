@@ -932,10 +932,10 @@ var Base64 = (function () {
     //644 digit slow
     security = "1475979915214180235084898622737381736312066145333169775147771216478570297878078949377407337049389289382748507531496480477281264838760259191814463365330269540496961201113430156902396093989090226259326935025281409614983499388222831448598601834318536230923772641390209490231836446899608210795482963763094236630945410832793769905399982457186322944729636418890623372171723742105636440368218459649632948538696905872650486914434637457507280441823676813517852099348660847172579408422316678097670224011990280170474894487426924742108823536808485072502240519452587542875349976558572670229633962575212637477897785501552646522609988869914013540483809865681250419497686697771007", NORMAL = 'b', URLSAFE = 'u', PERFORMANCE = 'p', SECURITY = 's', LZSTRING_CODE = 'l', NONCOMPRESSED_CODE = 'n', KEYED = 'e';
     var MODES = {
-        b: { CODE: NORMAL, NAME: 'normal', CHARSET: charset, PRIME: normal, VALIDATION: validation },
-        u: { CODE: URLSAFE, NAME: 'urlsafe', CHARSET: urlSafeCharset, PRIME: normal, VALIDATION: urlSafeValidation },
-        p: { CODE: PERFORMANCE, NAME: 'performance', CHARSET: charset, PRIME: normal, COMPRESS: false, VALIDATION: validation },
-        s: { CODE: SECURITY, NAME: 'security', CHARSET: charset, PRIME: security, COMPRESS: true, VALIDATION: validation }
+        b: { NAME: 'normal', CHARSET: charset, PRIME: normal, VALIDATION: validation },
+        u: { NAME: 'urlsafe', CHARSET: urlSafeCharset, PRIME: normal, VALIDATION: urlSafeValidation },
+        p: { NAME: 'performance', CHARSET: charset, PRIME: normal, COMPRESS: false, VALIDATION: validation },
+        s: { NAME: 'security', CHARSET: charset, PRIME: security, COMPRESS: true, VALIDATION: validation }
     };
     var MODE = NORMAL;
     function toHex(arr) {
@@ -948,7 +948,7 @@ var Base64 = (function () {
     /*compress and convert text to Base64*/
     function convertTo(input) {
         function toBase64(input) {
-            var i = 0;
+            var i = 0, charset = MODES[MODE].CHARSET;
             while (i < input.length * 2) {
                 if (i % 2 == 0) {
                     chr1 = input.charCodeAt(i / 2) >> 8;
@@ -979,17 +979,17 @@ var Base64 = (function () {
                     enc4 = 64;
                 }
                 output = output +
-                    c.charAt(enc1) + c.charAt(enc2) +
-                    c.charAt(enc3) + c.charAt(enc4);
+                    charset.charAt(enc1) + charset.charAt(enc2) +
+                    charset.charAt(enc3) + charset.charAt(enc4);
             }
             return output;
         }
         if (input === null)
             return "";
-        if (MODES[MODE].COMPRESS === false)
-            return MODES[MODE].CODE + toBase64(NONCOMPRESSED_CODE + input);
         var output = "", orig = input;
         var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+        if (MODES[MODE].COMPRESS === false)
+            return MODE + toBase64(NONCOMPRESSED_CODE + input);
         var i, value, context_dictionary = {}, context_dictionaryToCreate = {}, context_c = "", context_wc = "", context_w = "", context_enlargeIn = 2, // Compensate for the first entry which should not count
         context_dictSize = 3, context_numBits = 2, context_data_string = "", context_data_val = 0, context_data_position = 0, ii, f = String.fromCharCode;
         for (ii = 0; ii < input.length; ii += 1) {
@@ -1201,17 +1201,16 @@ var Base64 = (function () {
         }
         //constants represent the state of the data, whether or not 
         //it has been compressed so that the process can be reversed
-        var c = MODES[MODE].CHARSET;
         var compressed = toBase64(LZSTRING_CODE + context_data_string);
         if (MODES[MODE].COMPRESS === true)
-            return MODES[MODE].CODE + compressed;
+            return MODE + compressed;
         orig = toBase64(NONCOMPRESSED_CODE + orig);
         //only use compressed version if it is indeed smaller,
         //as lzstring compression actually lengthens short, or already
         //highly compressed strings
         if (compressed.length > orig.length)
             compressed = orig;
-        return MODES[MODE].CODE + compressed;
+        return MODE + compressed;
     }
     /*revert from compressed Base64 text to regular text*/
     function revertFrom(input) {
@@ -1678,23 +1677,16 @@ var Base64 = (function () {
             return String(Math.floor(Math.random() * (((Math.pow(10, 16)) - 1) - Math.pow(10, 15) + 1) + Math.pow(10, 15))).slice(3, 15);
         }
         var len = requiredLength && !isNaN(requiredLength) && isFinite(requiredLength) && requiredLength > 0 ? requiredLength : 8, ent = additionalEntropy ? String(additionalEntropy) : random12Digit(), num = 0, str = "", out = "";
-        if (len > 300)
-            len = 300; //physical limit
+        if (len > 1000)
+            len = 1000; //physical limit
         while (out.length < len) {
             num = Number(random12Digit());
             for (var b = 0; b < 4300; b++)
                 num += Number(String(new Date().getTime()).slice(7)); //generate 32 bits of entropy
             str = String(num);
-            while (str.charAt(0) === "0" && str.length > 1)
-                str = str.slice(1);
-            str = b64.number_hash(ent + str, 8); //generate 32 bit number from 32 bits of entropy (plus additionalEntropy)
+            str = b64.number_hash(ent + str, 8).slice(1); //generate 32 bit number from 32 bits of entropy (plus additionalEntropy)
             out += str; //string all the numbers together to form required length
         }
-        while (out.charAt(0) === "0" && out.length > 1)
-            out = out.slice(1);
-        //in some cases during the last round through the "while" statement a number starting with 3 or more 0's will be chosen which results in too short an output number
-        if (out.length < len)
-            return b64.rand(len, ent + random12Digit()); //try again
         return out.slice(0, len);
     };
     b64.hash = function (message, salt) {
@@ -1735,7 +1727,7 @@ var Base64 = (function () {
             var a, b = [], c = MODES[MODE].CHARSET, d = b64.hash(key), e, f = c + c + c + c + c;
             for (a = 0, e = 0; a < str.length; a++, e = e === String(d).length - 1 ? 0 : e + 1)
                 b[a] = f[c.indexOf(str[a]) + c.indexOf(String(d)[e]) * 4];
-            str = KEYED + MODES[MODE].CODE + b.join("");
+            str = KEYED + MODE + b.join("");
             a = null;
             b = null;
             c = null;
@@ -1839,7 +1831,6 @@ var Base64 = (function () {
         return {
             "Version": b64.Version,
             "Expires": expires,
-            "Mode": MODES[MODE].NAME,
             "Data": str,
             "PublicKey": b64.createPublicKey(key),
             "UserKeys": b64.write_and_verify(JSON.stringify(members)),

@@ -15,7 +15,17 @@
 	<script src=../base64.js></script>
 </head>
 <body>
-	<h1>base64 Tests</h1>
+	<h1>Base64 Tests</h1>
+
+	<label for="mode">Set Mode</label>
+	<select id="mode" name="mode">
+		<option value="normal">normal</option>
+		<option value="urlsafe">urlsafe</option>
+		<option value="performance">performance</option>
+		<option value="security">security</option>
+	</select>
+	<button onclick="javascript:run()">Run Test</button>
+	
 	<h2>Test 1: Write</h2>
 	str
 	<div id=output1 class="output"></div>
@@ -44,6 +54,8 @@
 	<div id=output11 class="output"></div>
 
 	<script>
+	function run() {
+		Base64.setMode(document.getElementById('mode').value);
 		var str = "my string of text";
 		var data = Base64.write(str);
 		//do something cool with data like saving it to localStorage or as a cookie
@@ -84,7 +96,7 @@
 			alert(downloadedDatabase.message);
 		}
 		document.getElementById('output11').innerHTML = JSON.stringify(downloadedDatabase);
-
+	}
 	</script>
 </body>
 </html>

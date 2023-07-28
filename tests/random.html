@@ -34,20 +34,20 @@
 	#graph1{
 	top:150px;
 	width:1008px;
-	height:367px;
+	height:400px;
 	}
 	#graph2{
-	top:570px;
+	top:600px;
 	width:1000px;
 	height:200px;
 	}
 	#graph3{
-	top: 820px;
+	top: 860px;
 	width: 1000px;
 	height: 500px;
 	}
 	#graph4{
-		top:1400px;
+		top: 1430px;
 		width:1000px;
 		height:500px;
 	}
@@ -59,13 +59,13 @@
 	top:100px;
 	}
 	#heading2{
-	top:520px;
+	top:550px;
 	}
 	#heading3{
-	top:770px;
+	top:810px;
 	}
 	#heading4{
-		top:1350px;
+		top:1380px;
 	}
 	.x-axis, .y-axis{
 	position: absolute;
@@ -78,37 +78,37 @@
 		transform: rotate(-90deg);
 	}
 	#graph1_y-axis{
-	top: 320px;
-	left: -150px;
-	width: 370px;
+	top: 340px;
+	left: -165px;
+	width: 400px;
 	}
 	#graph2_x-axis{
-	top:770px;
+	top:805px;
 	left:50px;
 	width:1000px;
 	}
 	#graph2_y-axis{
-	top: 660px;
+	top: 690px;
 	left: -65px;
 	width: 200px;
 	}
 	#graph3_x-axis{
-	top:1320px;
+	top:1365px;
 	left:50px;
 	width:1000px;
 	}
 	#graph3_y-axis{
-	top: 1060px;
+	top: 1100px;
 	left: -220px;
 	width: 500px;
 	}
 	#graph4_x-axis{
-		top:1900px;
+		top:1935px;
 		left:50px;
 		width:1000px;
 	}
 	#graph4_y-axis{
-		top:1650px;
+		top:1665px;
 		left:-220px;
 		width:500px;
 	}
@@ -131,8 +131,8 @@
 	<div id="intro">
 		This test creates random values and graphs the results<br />
 		Number of Random Values: <input id="numOfReps" type="number" min="1" max="5000" value="2500"/>
-		Number of Digits in Length: <input id="randomNumberLength" type="number" min="1" max="100" value="16"/>
-        <input id="go" type="button" value="GO (max 300 digits, be patient)" onclick="javascript: go(1);"/>
+		Number of Digits in Length: <input id="randomNumberLength" type="number" min="1" max="1000" value="16"/>
+        <input id="go" type="button" value="GO (max 1000 digits, be patient)" onclick="javascript: go(1);"/>
         <input id="compare" type="button" value="Compare with Math.random (max 16 digits)" onclick="javascript: go(2);"/>
 	</div>
 	<div id="debug"></div>
@@ -437,8 +437,8 @@
             randomNumberLength = trial === 2 && randomNumberLength > 16 ? 16 : randomNumberLength;
 
 			for (a = 0; a < numOfReps; a++) {
-			    if(trial === 1) key[a] = Base64.rand(randomNumberLength, a);
-                else key[a] = String(Math.floor(Math.random() * (((Math.pow(10, randomNumberLength)) - 1) - Math.pow(10, randomNumberLength - 1) + 1) + Math.pow(10, randomNumberLength - 1)));
+			    if (trial === 1) key[a] = Base64.rand(randomNumberLength, a);
+				else key[a] = String(Math.floor(Math.random() * Math.pow(10, randomNumberLength)));
                 compressed[a] = convertTo(key[a]).length;
                 uncompressed[a] = toBase64(key[a]).length;
 				var index = list.indexOf(key[a]);
@@ -457,7 +457,7 @@
 			var timePerCalc = (new Date() - t1) / numOfReps + " milliseconds per calculation";
 			if (randomNumberLength > 300) randomNumberLength = 300;
 			for (a = 0, b = 0, c = 0; a < numOfReps; a++) {
-				graph1 += "<div class='point' style='bottom:" + ((key[a] - Math.pow(10, randomNumberLength - 1)) / (2.5 * Math.pow(10, randomNumberLength - 3))) + "px; left:" + (a / 5) + "px;' title='value " + a + ": " + key[a] + "'></div>";
+				graph1 += "<div class='point' style='bottom:" + ((key[a] - Math.pow(10, randomNumberLength - 2)) / (2.5 * Math.pow(10, randomNumberLength - 3))) + "px; left:" + (a / 5) + "px;' title='value " + a + ": " + key[a] + "'></div>";
 				var test = String(key[a]);
 				if (test.length > maxLength) maxLength = test.length;
 				while (test.length < maxLength) test = "0" + test;
@@ -476,7 +476,7 @@
 			document.getElementById("graph1").style.width = ((numOfReps / 5) + 8) + "px";
 			document.getElementById("graph1").innerHTML = graph1;
 			for (a = 0; a < freq.length; a++) {
-				graph2 += "<div class='bar' style='height:" + (freq[a] * 200) / (maxFreq) + "px; left:" + ((list[a] - Math.pow(10, randomNumberLength - 1)) / (9 * Math.pow(10, randomNumberLength - 4))) + "px;' title='" + list[a] + ": " + freq[a] + " occurence(s)'></div>";
+				graph2 += "<div class='bar' style='height:" + (freq[a] * 200) / (maxFreq) + "px; left:" + ((list[a] - Math.pow(10, randomNumberLength - 2)) / (Math.pow(10, randomNumberLength - 3)) + 10) + "px;' title='" + list[a] + ": " + freq[a] + " occurence(s)'></div>";
 			}
 			document.getElementById("graph2").innerHTML = graph2;
 			for (a = 0, b = 0, c = 0; a < prob.length; a++) {
